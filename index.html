@@ -615,545 +615,873 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.2/proj4.js"></script>
 
   <script type="module">
-    import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.33.1-dev20.0/+esm';
-    import wkx from 'https://esm.sh/wkx';
-    import { Buffer } from 'https://esm.sh/buffer';
-
-    /* ─── CONFIG ─────────────────────────────────── */
-    const BUCKET_BASE_URL   = 'https://pub-048f4919d8bc472898a82c1bca238348.r2.dev/weekly_parquet';
-    const FILE_YEAR_IN_BUCKET = 2025;
-    const FILE_BASENAME     = 'terrace_shadows';
-    const FILE_SUFFIX       = '.parquet';
-    const ROTULOS_JSON_URL  = './rotulos_terrazas_index.json';
-    const MIN_DATE = '2026-01-01';
-    const MAX_DATE = '2026-12-31';
-    const SOURCE_EPSG = 'EPSG:25830';
-    const TARGET_EPSG = 'EPSG:4326';
-    const RING_CIRCUMFERENCE = 2 * Math.PI * 28; // ≈ 175.93
-
-    /* ─── STATE ──────────────────────────────────── */
-    let db = null, conn = null;
-    let currentLayer = null;
-    let currentDayFeatures = [];
-    let autoLoadTimeout = null;
-    let rotulosCatalog = [];
-    let currentSuggestions = [];
-    let selectedSuggIdx = -1;
-    let selectedTerraceId = null;
-    let selectedRotulo = null;
-    const registeredWeekAliases = new Set();
-
-    /* ─── DOM ────────────────────────────────────── */
-    const searchInput    = document.getElementById('rotuloSearchInput');
-    const searchClear    = document.getElementById('search-clear');
-    const acList         = document.getElementById('autocompleteList');
-    const dateInput      = document.getElementById('dateInput');
-    const hourSlider     = document.getElementById('hourSlider');
-    const hourBadge      = document.getElementById('hourBadge');
-    const statusPill     = document.getElementById('status-pill');
-    const sheet          = document.getElementById('sheet');
-    const placeName      = document.getElementById('place-name');
-    const shadowPctVal   = document.getElementById('shadow-pct-value');
-    const shadowTimeNote = document.getElementById('shadow-time-note');
-    const ringFill       = document.getElementById('ring-fill');
-    const ringLabelText  = document.getElementById('ring-label-text');
-    const noResult       = document.getElementById('no-result');
-    const desktopLabel   = document.getElementById('desktop-label');
-
-    /* ─── MAP ────────────────────────────────────── */
-    const map = L.map('map', { center: [40.4168,-3.7038], zoom: 13, preferCanvas: true, zoomControl: false });
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd', maxZoom: 20,
-      attribution: '© OpenStreetMap © CARTO'
-    }).addTo(map);
-
-    L.control.zoom({ position: 'topright' }).addTo(map);
-
-    /* ─── PROJ ───────────────────────────────────── */
-    proj4.defs(SOURCE_EPSG, '+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs +type=crs');
-    proj4.defs(TARGET_EPSG, '+proj=longlat +datum=WGS84 +no_defs +type=crs');
-
-    /* ─── SHEET DRAG (MOBILE) ────────────────────── */
-    const sheetStates  = ['peek','mid','full'];
-    let sheetState     = 'peek';
-    let dragStartY     = 0;
-    let dragStartState = 'peek';
-    let isDragging     = false;
-    let dragDelta      = 0;
-
-    const peekH  = () => parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sheet-peek')) || 160;
-    const midH   = () => window.innerHeight * 0.55;
-    const fullH  = () => window.innerHeight * 0.92;
-
-    function setSheetState(state, animate = true) {
-      sheetState = state;
-      if (!animate) sheet.style.transition = 'none';
-      sheet.dataset.state = state;
-      if (!animate) setTimeout(() => sheet.style.transition = '', 50);
-
-      const h = state === 'peek' ? peekH() : state === 'mid' ? midH() : fullH();
-      statusPill.style.bottom = (h + 12) + 'px';
-    }
-
-    const handleArea = document.getElementById('sheet-handle-area');
-
-    function onDragStart(clientY) {
-      isDragging = true;
-      dragStartY = clientY;
-      dragStartState = sheetState;
-      dragDelta = 0;
-      sheet.style.transition = 'none';
-    }
-
-    function onDragMove(clientY) {
-      if (!isDragging) return;
-      dragDelta = dragStartY - clientY;
-    }
-
-    function onDragEnd() {
-      if (!isDragging) return;
-      isDragging = false;
-      sheet.style.transition = '';
-
-      const threshold = 60;
-      if (dragStartState === 'peek') {
-        setSheetState(dragDelta > threshold ? 'mid' : 'peek');
-      } else if (dragStartState === 'mid') {
-        if (dragDelta > threshold) setSheetState('full');
-        else if (dragDelta < -threshold) setSheetState('peek');
-        else setSheetState('mid');
-      } else {
-        setSheetState(dragDelta < -threshold ? 'mid' : 'full');
-      }
-    }
-
-    handleArea.addEventListener('touchstart', e => { onDragStart(e.touches[0].clientY); }, { passive: true });
-    handleArea.addEventListener('touchmove',  e => { onDragMove(e.touches[0].clientY); }, { passive: true });
-    handleArea.addEventListener('touchend',   () => onDragEnd());
-    handleArea.addEventListener('mousedown',  e => onDragStart(e.clientY));
-    document.addEventListener('mousemove',    e => { if (isDragging) onDragMove(e.clientY); });
-    document.addEventListener('mouseup',      () => { if (isDragging) onDragEnd(); });
-
-    /* ─── STATUS ─────────────────────────────────── */
-    let statusTimeout = null;
-    function showStatus(msg, isError = false, loading = false) {
-      statusPill.innerHTML = loading ? `<span class="spinner"></span>${msg}` : msg;
-      statusPill.className = 'visible' + (isError ? ' error' : '');
-      clearTimeout(statusTimeout);
-      if (!loading) {
-        statusTimeout = setTimeout(() => { statusPill.className = ''; }, 2800);
-      }
-    }
-
-    function hideStatus() {
-      clearTimeout(statusTimeout);
-      statusPill.className = '';
-    }
-
-    /* ─── HOUR ───────────────────────────────────── */
-    function updateHour(h) {
-      hourBadge.textContent = `${String(h).padStart(2,'0')}:00`;
-    }
-
-    /* ─── RING ───────────────────────────────────── */
-    function updateRing(pct) {
-      if (pct === null) {
-        ringFill.style.strokeDashoffset = RING_CIRCUMFERENCE;
-        ringLabelText.innerHTML = '—<br><span>sombra</span>';
-        shadowPctVal.textContent = '—';
-        shadowTimeNote.textContent = 'Selecciona lugar, fecha y hora';
-        return;
-      }
-      const capped = Math.min(pct, 100);
-      const offset = RING_CIRCUMFERENCE * (1 - capped / 100);
-      ringFill.style.strokeDashoffset = offset;
-      ringLabelText.innerHTML = `${capped.toFixed(0)}%<br><span>sombra</span>`;
-      shadowPctVal.textContent = `${capped.toFixed(1)} %`;
-      shadowTimeNote.textContent = `${String(hourSlider.value).padStart(2,'0')}:00 · ${dateInput.value}`;
-    }
-
-    /* ─── AUTOCOMPLETE ───────────────────────────── */
-    function normalizeText(t) {
-      return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/\s+/g,' ');
-    }
-
-    function escapeHtml(s) {
-      return String(s ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-    }
-
-    function getLabel(item) {
-      return item.label_busqueda || item.rotulo_formateado || item.rotulo_original || `Terraza ${item.terraza_id}`;
-    }
-
-    function searchCatalog(q) {
-      const n = normalizeText(q);
-      if (!n) return [];
-      const starts = [], contains = [];
-      for (const item of rotulosCatalog) {
-        if (!item._blob.includes(n)) continue;
-        (normalizeText(getLabel(item)).startsWith(n) ? starts : contains).push(item);
-      }
-      return [...starts, ...contains].slice(0, 12);
-    }
-
-    function renderAC(items) {
-      currentSuggestions = items;
-      selectedSuggIdx = -1;
-
-      if (!items.length) { closeAC(); return; }
-
-      acList.innerHTML = items.map((item, i) => `
-        <div class="ac-item" role="option" data-idx="${i}">
-          <div class="ac-pin">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
-            </svg>
-          </div>
-          <div class="ac-text">
-            <div class="ac-title">${escapeHtml(getLabel(item))}</div>
-            <div class="ac-sub">${escapeHtml(item.direccion_resumen || item.nombre_via || '')}</div>
-          </div>
-        </div>
-      `).join('');
-
-      acList.classList.add('open');
-
-      acList.querySelectorAll('.ac-item').forEach(el => {
-        el.addEventListener('mousedown', e => { e.preventDefault(); selectSuggestion(+el.dataset.idx); });
-        el.addEventListener('touchend',  e => { e.preventDefault(); selectSuggestion(+el.dataset.idx); });
-      });
-    }
-
-    function closeAC() { acList.innerHTML = ''; acList.classList.remove('open'); currentSuggestions = []; selectedSuggIdx = -1; }
-
-    function highlightAC() {
-      acList.querySelectorAll('.ac-item').forEach((el,i) => el.classList.toggle('active', i === selectedSuggIdx));
-      const active = acList.querySelector('.ac-item.active');
-      if (active) active.scrollIntoView({ block: 'nearest' });
-    }
-
-    function selectSuggestion(idx) {
-      const item = currentSuggestions[idx];
-      if (!item) return;
-      selectedTerraceId = item.terraza_id;
-      selectedRotulo    = getLabel(item);
-      searchInput.value = selectedRotulo;
-      searchClear.classList.add('visible');
-      closeAC();
-      placeName.textContent = selectedRotulo;
-      placeName.classList.remove('empty');
-      setSheetState('mid');
-      scheduleLoad();
-    }
-
-    /* ─── SEARCH EVENTS ──────────────────────────── */
-    searchInput.addEventListener('input', () => {
-      const q = searchInput.value.trim();
-      searchClear.classList.toggle('visible', q.length > 0);
-      renderAC(searchCatalog(q));
-    });
-
-    searchInput.addEventListener('focus', () => {
-      const q = searchInput.value.trim();
-      if (q) renderAC(searchCatalog(q));
-    });
-
-    searchInput.addEventListener('keydown', e => {
-      if (!acList.classList.contains('open')) {
-        if (e.key === 'Enter') {
-          const s = searchCatalog(searchInput.value.trim());
-          if (s.length === 1) { e.preventDefault(); selectSuggestion(0); }
-        }
-        return;
-      }
-      if (e.key === 'ArrowDown') { e.preventDefault(); selectedSuggIdx = Math.min(selectedSuggIdx+1, currentSuggestions.length-1); highlightAC(); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); selectedSuggIdx = Math.max(selectedSuggIdx-1, 0); highlightAC(); }
-      else if (e.key === 'Enter') { e.preventDefault(); if (selectedSuggIdx >= 0) selectSuggestion(selectedSuggIdx); else if (currentSuggestions.length===1) selectSuggestion(0); }
-      else if (e.key === 'Escape') closeAC();
-    });
-
-    searchInput.addEventListener('blur', () => setTimeout(closeAC, 180));
-
-    searchClear.addEventListener('click', () => {
-      searchInput.value = '';
-      searchClear.classList.remove('visible');
-      closeAC();
-      searchInput.focus();
-    });
-
-    document.addEventListener('click', e => {
-      if (!e.target.closest('#search-wrap')) closeAC();
-    });
-
-    /* ─── CONTROL EVENTS ─────────────────────────── */
-    dateInput.addEventListener('change', scheduleLoad);
-    dateInput.addEventListener('keydown', e => { if (e.key === 'Enter') loadSelection(); });
-
-    hourSlider.addEventListener('input', () => {
-      updateHour(+hourSlider.value);
-      scheduleLoad();
-    });
-
-    function scheduleLoad() {
-      clearTimeout(autoLoadTimeout);
-      autoLoadTimeout = setTimeout(loadSelection, 130);
-    }
-
-    /* ─── PROJ HELPERS ───────────────────────────── */
-    function transformCoords(coords) {
-      if (!Array.isArray(coords)) return coords;
-      if (coords.length >= 2 && !Array.isArray(coords[0])) {
-        const [lon, lat] = proj4(SOURCE_EPSG, TARGET_EPSG, [+coords[0], +coords[1]]);
-        return [lon, lat];
-      }
-      return coords.map(transformCoords);
-    }
-
-    function reprojectGeometry(geom) {
-      if (!geom?.type) return null;
-      if (geom.type === 'GeometryCollection') return { ...geom, geometries: (geom.geometries||[]).map(reprojectGeometry).filter(Boolean) };
-      if (!geom.coordinates) return null;
-      return { ...geom, coordinates: transformCoords(geom.coordinates) };
-    }
-
-    function toUint8(v) {
-      if (!v) return null;
-      if (v instanceof Uint8Array) return v;
-      if (v instanceof ArrayBuffer) return new Uint8Array(v);
-      if (Array.isArray(v)) return new Uint8Array(v);
-      if (ArrayBuffer.isView(v)) return new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
-      if (typeof v === 'object') { const vals = Object.values(v); if (vals.every(x => Number.isFinite(+x))) return new Uint8Array(vals.map(Number)); }
-      return null;
-    }
-
-    function isGeoJSON(v) { return v && typeof v === 'object' && typeof v.type === 'string' && (Array.isArray(v.coordinates)||Array.isArray(v.geometries)); }
-
-    function decodeWkb(v) {
-      if (!v) throw new Error('empty geom');
-      if (typeof v === 'string') return wkx.Geometry.parse(v).toGeoJSON();
-      const bytes = toUint8(v);
-      if (!bytes) throw new Error('cannot convert geom');
-      return wkx.Geometry.parse(Buffer.from(bytes)).toGeoJSON();
-    }
-
-    /* ─── DATE HELPERS ───────────────────────────── */
-    function isoWeekInfo(dateStr) {
-      const d = new Date(dateStr + 'T00:00:00');
-      const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      const dow = tmp.getUTCDay() || 7;
-      tmp.setUTCDate(tmp.getUTCDate() + 4 - dow);
-      const isoYear = tmp.getUTCFullYear();
-      const yearStart = new Date(Date.UTC(isoYear, 0, 1));
-      const isoWeek = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
-      return { isoYear, isoWeek };
-    }
-
-    function isoWeekDate(isoYear, isoWeek, dow) {
-      const s = new Date(Date.UTC(isoYear, 0, 4 + (isoWeek-1)*7));
-      const d = s.getUTCDay() || 7;
-      s.setUTCDate(s.getUTCDate() - d + dow);
-      return `${s.getUTCFullYear()}-${String(s.getUTCMonth()+1).padStart(2,'0')}-${String(s.getUTCDate()).padStart(2,'0')}`;
-    }
-
-    function representativeWednesday(selectedDate) {
-      const { isoWeek } = isoWeekInfo(selectedDate);
-      return isoWeekDate(FILE_YEAR_IN_BUCKET, isoWeek, 3);
-    }
-
-    function weekAlias(dateStr) {
-      const { isoWeek } = isoWeekInfo(dateStr);
-      return `${FILE_BASENAME}_${FILE_YEAR_IN_BUCKET}_W${String(isoWeek).padStart(2,'0')}${FILE_SUFFIX}`;
-    }
-
-    function weekUrl(dateStr) {
-      return `${BUCKET_BASE_URL}/${weekAlias(dateStr)}`;
-    }
-
-    function toYMD(v) {
-      if (!v) return null;
-      if (typeof v === 'string') { const m = v.match(/^(\d{4}-\d{2}-\d{2})/); if (m) return m[1]; }
-      const d = new Date(v);
-      if (isNaN(d)) return null;
-      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    }
-
-    function hourFromDatetime(v) {
-      if (!v) return null;
-      if (typeof v === 'string') { const m = v.match(/T(\d{2}):|  (\d{2}):/); if (m) return +(m[1]||m[2]); }
-      const d = new Date(v); return isNaN(d) ? null : d.getHours();
-    }
-
-    /* ─── DUCKDB ─────────────────────────────────── */
-    async function initDuckDB() {
-      try {
-        showStatus('Cargando motor de datos…', false, true);
-        const bundles = duckdb.getJsDelivrBundles();
-        const bundle  = await duckdb.selectBundle(bundles);
-        const workerUrl = URL.createObjectURL(new Blob([`importScripts("${bundle.mainWorker}");`], { type:'text/javascript' }));
-        const worker = new Worker(workerUrl);
-        db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
-        await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-        URL.revokeObjectURL(workerUrl);
-        conn = await db.connect();
-        await conn.query(`SET enable_progress_bar = false; SET threads = 1;`);
-        hideStatus();
-      } catch (err) {
-        showStatus('Error inicializando el motor de datos', true);
-        console.error(err);
-      }
-    }
-
-    async function ensureWeekFile(dateStr) {
-      const alias = weekAlias(dateStr);
-      if (!registeredWeekAliases.has(alias)) {
-        await db.registerFileURL(alias, weekUrl(dateStr), duckdb.DuckDBDataProtocol.HTTP, true);
-        registeredWeekAliases.add(alias);
-      }
-      return alias;
-    }
-
-    function normRow(row) {
-      if (!row) return row;
-      if (typeof row.toJSON === 'function') return row.toJSON();
-      const obj = {};
-      for (const k of Object.keys(row)) { const v = row[k]; obj[k] = (v && typeof v.toJSON === 'function') ? v.toJSON() : v; }
-      return obj;
-    }
-
-    async function arrowToRows(table) {
-      if (!table) return [];
-      return (table.toArray ? table.toArray() : []).map(normRow);
-    }
-
-    /* ─── CATALOG ────────────────────────────────── */
-    async function loadCatalog() {
-      try {
-        const res = await fetch(ROTULOS_JSON_URL, { cache: 'no-store' });
-        if (!res.ok) throw new Error('fetch failed');
-        const data = await res.json();
-        rotulosCatalog = data
-          .map(item => ({
-            ...item,
-            terraza_id: +item.terraza_id,
-            _blob: normalizeText([item.label_busqueda, item.rotulo_formateado, item.rotulo_original, item.direccion_resumen, item.nombre_via, item.numero_via].filter(Boolean).join(' '))
-          }))
-          .filter(item => Number.isFinite(item.terraza_id));
-      } catch (err) {
-        console.warn('Could not load catalog', err);
-      }
-    }
-
-    /* ─── LOAD & RENDER ──────────────────────────── */
-    async function loadSelection() {
-      if (!db || !conn) return;
-      if (!selectedTerraceId) return;
-
-      const selectedDate = dateInput.value;
-      const selectedHour = +hourSlider.value;
-
-      if (!selectedDate || selectedDate < MIN_DATE || selectedDate > MAX_DATE) {
-        showStatus('Fecha fuera de rango', true);
-        return;
-      }
-
-      try {
-        showStatus('Consultando datos…', false, true);
-        noResult.style.display = 'none';
-
-        const alias = await ensureWeekFile(selectedDate);
-        const repDate = representativeWednesday(selectedDate);
-
-        const sql = `
-          SELECT terraza_id, rotulo, datetime, date,
-                 shadow_area_m2, shadow_pct, terrace_area_m2, building_id, geometry
-          FROM read_parquet('${alias}')
-          WHERE terraza_id = ${+selectedTerraceId}
-            AND substr(coalesce(cast(date as varchar), cast(datetime as varchar)),1,10) = '${repDate}'
-            AND EXTRACT(HOUR FROM datetime) = ${selectedHour}
-          ORDER BY datetime
-        `;
-
-        const result = await conn.query(sql);
-        const rows   = await arrowToRows(result);
-
-        const features = rows.map((row, i) => {
-          try {
-            const rawGeom = row.geometry;
-            if (!rawGeom) return null;
-            const sourceGeom = isGeoJSON(rawGeom) ? rawGeom : decodeWkb(rawGeom);
-            const geom4326   = reprojectGeometry(sourceGeom);
-            if (!geom4326) return null;
-            return {
-              type: 'Feature',
-              geometry: geom4326,
-              properties: {
-                terraza_id:    +row.terraza_id,
-                rotulo:        row.rotulo ?? '',
-                shadow_pct:    row.shadow_pct,
-                shadow_area_m2: row.shadow_area_m2,
-                terrace_area_m2: row.terrace_area_m2,
-                hour:          hourFromDatetime(row.datetime),
-              }
-            };
-          } catch { return null; }
-        }).filter(Boolean);
-
-        currentDayFeatures = features;
-
-        if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
-
-        if (!features.length) {
-          updateRing(null);
-          noResult.style.display = 'block';
-          hideStatus();
-          return;
-        }
-
-        currentLayer = L.geoJSON(features, {
-          style: () => ({
-            color: '#c0603a',
-            weight: 2,
-            fillColor: '#c0603a',
-            fillOpacity: 0.30,
-          }),
-          onEachFeature: (feature, layer) => {
-            const p = feature.properties;
-            const capped = Math.min(p.shadow_pct <= 1 ? p.shadow_pct * 100 : p.shadow_pct, 100);
-            layer.bindPopup(`<strong>${escapeHtml(p.rotulo || 'Terraza')}</strong><br>Sombra: ${capped.toFixed(1)} %`);
-          }
-        }).addTo(map);
-
-        try {
-          const bounds = currentLayer.getBounds();
-          if (bounds.isValid()) map.fitBounds(bounds, { padding:[40,40], maxZoom:18 });
-        } catch {}
-
-        const raw = features[0].properties.shadow_pct;
-        const pct = raw !== null && raw !== undefined ? (raw <= 1 ? raw * 100 : raw) : null;
-        updateRing(pct);
-        hideStatus();
-
-      } catch (err) {
-        showStatus('Error al consultar los datos', true);
-        console.error(err);
-      }
-    }
-
-    /* ─── DESKTOP LABEL ──────────────────────────── */
-    function checkDesktop() {
-      if (window.innerWidth >= 720) desktopLabel.style.display = 'block';
-      else desktopLabel.style.display = 'none';
-    }
-    checkDesktop();
-    window.addEventListener('resize', checkDesktop);
-
-    /* ─── INIT ───────────────────────────────────── */
-    updateHour(+hourSlider.value);
-    updateRing(null);
-    setSheetState('peek', false);
-    await loadCatalog();
-    await initDuckDB();
-  </script>
+	  import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.33.1-dev20.0/+esm';
+	  import wkx from 'https://esm.sh/wkx';
+	  import { Buffer } from 'https://esm.sh/buffer';
+
+	  /* ─── CONFIG ─────────────────────────────────── */
+	  const BUCKET_BASE_URL = 'https://pub-048f4919d8bc472898a82c1bca238348.r2.dev/weekly_parquet';
+	  const FILE_YEAR_IN_BUCKET = 2025;
+	  const FILE_BASENAME = 'terrace_shadows';
+	  const FILE_SUFFIX = '.parquet';
+	  const ROTULOS_JSON_URL = './rotulos_terrazas_index.json';
+
+	  const MIN_DATE = '2026-01-01';
+	  const MAX_DATE = '2026-12-31';
+
+	  const SOURCE_EPSG = 'EPSG:25830';
+	  const TARGET_EPSG = 'EPSG:4326';
+	  const RING_CIRCUMFERENCE = 2 * Math.PI * 28;
+
+	  /* ─── STATE ──────────────────────────────────── */
+	  let db = null;
+	  let conn = null;
+	  let currentLayer = null;
+	  let currentDayFeatures = [];
+	  let autoLoadTimeout = null;
+
+	  let rotulosCatalog = [];
+	  let currentSuggestions = [];
+	  let selectedSuggIdx = -1;
+	  let selectedTerraceId = null;
+	  let selectedRotulo = null;
+
+	  const registeredWeekAliases = new Set();
+
+	  /* ─── DOM ────────────────────────────────────── */
+	  const searchInput = document.getElementById('rotuloSearchInput');
+	  const searchClear = document.getElementById('search-clear');
+	  const acList = document.getElementById('autocompleteList');
+	  const dateInput = document.getElementById('dateInput');
+	  const hourSlider = document.getElementById('hourSlider');
+	  const hourBadge = document.getElementById('hourBadge');
+	  const statusPill = document.getElementById('status-pill');
+	  const sheet = document.getElementById('sheet');
+	  const placeName = document.getElementById('place-name');
+	  const shadowPctVal = document.getElementById('shadow-pct-value');
+	  const shadowTimeNote = document.getElementById('shadow-time-note');
+	  const ringFill = document.getElementById('ring-fill');
+	  const ringLabelText = document.getElementById('ring-label-text');
+	  const noResult = document.getElementById('no-result');
+	  const desktopLabel = document.getElementById('desktop-label');
+	  const handleArea = document.getElementById('sheet-handle-area');
+
+	  /* ─── MAP ────────────────────────────────────── */
+	  const map = L.map('map', {
+		center: [40.4168, -3.7038],
+		zoom: 13,
+		preferCanvas: true,
+		zoomControl: false,
+	  });
+
+	  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+		subdomains: 'abcd',
+		maxZoom: 20,
+		attribution: '© OpenStreetMap © CARTO'
+	  }).addTo(map);
+
+	  L.control.zoom({ position: 'topright' }).addTo(map);
+
+	  /* ─── PROJ ───────────────────────────────────── */
+	  proj4.defs(
+		SOURCE_EPSG,
+		'+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs +type=crs'
+	  );
+	  proj4.defs(
+		TARGET_EPSG,
+		'+proj=longlat +datum=WGS84 +no_defs +type=crs'
+	  );
+
+	  /* ─── SHEET DRAG (MOBILE) ────────────────────── */
+	  let sheetState = 'peek';
+	  let dragStartY = 0;
+	  let dragStartState = 'peek';
+	  let isDragging = false;
+	  let dragDelta = 0;
+
+	  const peekH = () => parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sheet-peek')) || 160;
+	  const midH = () => window.innerHeight * 0.55;
+	  const fullH = () => window.innerHeight * 0.92;
+
+	  function setSheetState(state, animate = true) {
+		sheetState = state;
+		if (!animate) sheet.style.transition = 'none';
+		sheet.dataset.state = state;
+		if (!animate) setTimeout(() => { sheet.style.transition = ''; }, 50);
+
+		const h = state === 'peek' ? peekH() : state === 'mid' ? midH() : fullH();
+		statusPill.style.bottom = (h + 12) + 'px';
+	  }
+
+	  function onDragStart(clientY) {
+		isDragging = true;
+		dragStartY = clientY;
+		dragStartState = sheetState;
+		dragDelta = 0;
+		sheet.style.transition = 'none';
+	  }
+
+	  function onDragMove(clientY) {
+		if (!isDragging) return;
+		dragDelta = dragStartY - clientY;
+	  }
+
+	  function onDragEnd() {
+		if (!isDragging) return;
+		isDragging = false;
+		sheet.style.transition = '';
+
+		const threshold = 60;
+		if (dragStartState === 'peek') {
+		  setSheetState(dragDelta > threshold ? 'mid' : 'peek');
+		} else if (dragStartState === 'mid') {
+		  if (dragDelta > threshold) setSheetState('full');
+		  else if (dragDelta < -threshold) setSheetState('peek');
+		  else setSheetState('mid');
+		} else {
+		  setSheetState(dragDelta < -threshold ? 'mid' : 'full');
+		}
+	  }
+
+	  handleArea.addEventListener('touchstart', e => { onDragStart(e.touches[0].clientY); }, { passive: true });
+	  handleArea.addEventListener('touchmove', e => { onDragMove(e.touches[0].clientY); }, { passive: true });
+	  handleArea.addEventListener('touchend', () => onDragEnd());
+	  handleArea.addEventListener('mousedown', e => onDragStart(e.clientY));
+	  document.addEventListener('mousemove', e => { if (isDragging) onDragMove(e.clientY); });
+	  document.addEventListener('mouseup', () => { if (isDragging) onDragEnd(); });
+
+	  /* ─── STATUS ─────────────────────────────────── */
+	  let statusTimeout = null;
+
+	  function showStatus(msg, isError = false, loading = false) {
+		statusPill.innerHTML = loading ? `<span class="spinner"></span>${msg}` : msg;
+		statusPill.className = 'visible' + (isError ? ' error' : '');
+		clearTimeout(statusTimeout);
+		if (!loading) {
+		  statusTimeout = setTimeout(() => {
+			statusPill.className = '';
+		  }, 2800);
+		}
+	  }
+
+	  function hideStatus() {
+		clearTimeout(statusTimeout);
+		statusPill.className = '';
+	  }
+
+	  /* ─── HELPERS ────────────────────────────────── */
+	  function updateHour(hour) {
+		hourBadge.textContent = `${String(hour).padStart(2, '0')}:00`;
+	  }
+
+	  function clampHour(hour) {
+		return Math.max(6, Math.min(22, Number(hour)));
+	  }
+
+	  function isFiniteNumber(v) {
+		return Number.isFinite(Number(v));
+	  }
+
+	  function toNumberOrNull(v) {
+		if (v === null || v === undefined) return null;
+		const n = Number(v);
+		return Number.isFinite(n) ? n : null;
+	  }
+
+	  function normalizeText(text) {
+		return String(text ?? '')
+		  .normalize('NFD')
+		  .replace(/[\u0300-\u036f]/g, '')
+		  .toLowerCase()
+		  .trim()
+		  .replace(/\s+/g, ' ');
+	  }
+
+	  function escapeHtml(str) {
+		return String(str ?? '')
+		  .replaceAll('&', '&amp;')
+		  .replaceAll('<', '&lt;')
+		  .replaceAll('>', '&gt;')
+		  .replaceAll('"', '&quot;')
+		  .replaceAll("'", '&#039;');
+	  }
+
+	  function formatPercent(v) {
+		const n = toNumberOrNull(v);
+		if (n === null) return '—';
+		const pct = n <= 1 ? n * 100 : n;
+		return `${Math.min(pct, 100).toFixed(1)} %`;
+	  }
+
+	  function updateRing(pct) {
+		if (pct === null) {
+		  ringFill.style.strokeDashoffset = RING_CIRCUMFERENCE;
+		  ringLabelText.innerHTML = '—<br><span>sombra</span>';
+		  shadowPctVal.textContent = '—';
+		  shadowTimeNote.textContent = 'Selecciona lugar, fecha y hora';
+		  return;
+		}
+
+		const capped = Math.min(pct, 100);
+		const offset = RING_CIRCUMFERENCE * (1 - capped / 100);
+		ringFill.style.strokeDashoffset = offset;
+		ringLabelText.innerHTML = `${capped.toFixed(0)}%<br><span>sombra</span>`;
+		shadowPctVal.textContent = `${capped.toFixed(1)} %`;
+		shadowTimeNote.textContent = `${String(hourSlider.value).padStart(2, '0')}:00 · ${dateInput.value}`;
+	  }
+
+	  function clearLayer() {
+		if (currentLayer) {
+		  map.removeLayer(currentLayer);
+		  currentLayer = null;
+		}
+	  }
+
+	  function resetSummary() {
+		updateRing(null);
+		noResult.style.display = 'none';
+	  }
+
+	  /* ─── DATE HELPERS ───────────────────────────── */
+	  function toYMD(value) {
+		if (!value) return null;
+
+		if (typeof value === 'string') {
+		  const m = value.match(/^(\d{4}-\d{2}-\d{2})/);
+		  if (m) return m[1];
+		}
+
+		const d = new Date(value);
+		if (Number.isNaN(d.getTime())) return null;
+
+		const y = d.getFullYear();
+		const m = String(d.getMonth() + 1).padStart(2, '0');
+		const day = String(d.getDate()).padStart(2, '0');
+		return `${y}-${m}-${day}`;
+	  }
+
+	  function getHourFromDatetime(value) {
+		if (!value) return null;
+
+		if (typeof value === 'string') {
+		  const m = value.match(/T(\d{2}):/);
+		  if (m) return Number(m[1]);
+
+		  const m2 = value.match(/ (\d{2}):/);
+		  if (m2) return Number(m2[1]);
+		}
+
+		const d = new Date(value);
+		if (Number.isNaN(d.getTime())) return null;
+
+		return d.getHours();
+	  }
+
+	  function getIsoWeekInfo(dateString) {
+		const date = new Date(dateString + 'T00:00:00');
+		if (Number.isNaN(date.getTime())) {
+		  throw new Error(`Fecha inválida: ${dateString}`);
+		}
+
+		const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+		const dayNum = tmp.getUTCDay() || 7;
+		tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+
+		const isoYear = tmp.getUTCFullYear();
+		const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+		const isoWeek = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
+
+		return { isoYear, isoWeek };
+	  }
+
+	  function getIsoWeekDate(isoYear, isoWeek, isoWeekday) {
+		const simple = new Date(Date.UTC(isoYear, 0, 4 + (isoWeek - 1) * 7));
+		const dow = simple.getUTCDay() || 7;
+		simple.setUTCDate(simple.getUTCDate() - dow + isoWeekday);
+
+		const y = simple.getUTCFullYear();
+		const m = String(simple.getUTCMonth() + 1).padStart(2, '0');
+		const d = String(simple.getUTCDate()).padStart(2, '0');
+
+		return `${y}-${m}-${d}`;
+	  }
+
+	  function getRepresentativeWednesdayDateForSelectedWeek(selectedDate) {
+		const { isoWeek } = getIsoWeekInfo(selectedDate);
+		return getIsoWeekDate(FILE_YEAR_IN_BUCKET, isoWeek, 3);
+	  }
+
+	  function buildWeekFileName(dateString) {
+		const { isoWeek } = getIsoWeekInfo(dateString);
+		return `${FILE_BASENAME}_${FILE_YEAR_IN_BUCKET}_W${String(isoWeek).padStart(2, '0')}${FILE_SUFFIX}`;
+	  }
+
+	  function buildWeekUrl(dateString) {
+		return `${BUCKET_BASE_URL}/${buildWeekFileName(dateString)}`;
+	  }
+
+	  function buildWeekAlias(dateString) {
+		const { isoWeek } = getIsoWeekInfo(dateString);
+		return `week_${FILE_YEAR_IN_BUCKET}_W${String(isoWeek).padStart(2, '0')}.parquet`;
+	  }
+
+	  /* ─── GEOMETRY HELPERS ────────────────────────── */
+	  function transformCoords25830To4326(coords) {
+		if (!Array.isArray(coords)) return coords;
+
+		if (coords.length >= 2 && !Array.isArray(coords[0])) {
+		  const x = Number(coords[0]);
+		  const y = Number(coords[1]);
+
+		  if (!isFiniteNumber(x) || !isFiniteNumber(y)) {
+			throw new Error('Coordenadas no finitas detectadas');
+		  }
+
+		  const result = proj4(SOURCE_EPSG, TARGET_EPSG, [x, y]);
+		  const lon = Number(result[0]);
+		  const lat = Number(result[1]);
+
+		  if (!isFiniteNumber(lon) || !isFiniteNumber(lat)) {
+			throw new Error('Reproyección inválida');
+		  }
+
+		  return [lon, lat];
+		}
+
+		return coords.map(transformCoords25830To4326);
+	  }
+
+	  function reprojectGeometry(geometry) {
+		if (!geometry || !geometry.type) return null;
+
+		if (geometry.type === 'GeometryCollection') {
+		  return {
+			...geometry,
+			geometries: (geometry.geometries || [])
+			  .map(reprojectGeometry)
+			  .filter(Boolean),
+		  };
+		}
+
+		if (!geometry.coordinates) return null;
+
+		return {
+		  ...geometry,
+		  coordinates: transformCoords25830To4326(geometry.coordinates),
+		};
+	  }
+
+	  function toUint8Array(value) {
+		if (!value) return null;
+
+		if (value instanceof Uint8Array) return value;
+		if (value instanceof ArrayBuffer) return new Uint8Array(value);
+		if (Array.isArray(value)) return new Uint8Array(value);
+
+		if (ArrayBuffer.isView(value)) {
+		  return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+		}
+
+		if (typeof value === 'object') {
+		  const vals = Object.values(value);
+		  if (vals.length && vals.every(v => Number.isFinite(Number(v)))) {
+			return new Uint8Array(vals.map(v => Number(v)));
+		  }
+		}
+
+		return null;
+	  }
+
+	  function isLikelyGeoJSONGeometry(value) {
+		return (
+		  value &&
+		  typeof value === 'object' &&
+		  typeof value.type === 'string' &&
+		  (Array.isArray(value.coordinates) || Array.isArray(value.geometries))
+		);
+	  }
+
+	  function decodeWkbGeometry(value) {
+		if (!value) {
+		  throw new Error('geometry vacía');
+		}
+
+		if (typeof value === 'string') {
+		  const geom = wkx.Geometry.parse(value);
+		  return geom.toGeoJSON();
+		}
+
+		const bytes = toUint8Array(value);
+		if (!bytes) {
+		  throw new Error('No se pudo convertir geometry');
+		}
+
+		const geom = wkx.Geometry.parse(Buffer.from(bytes));
+		return geom.toGeoJSON();
+	  }
+
+	  function getGeometryFromRow(row, rowIndex) {
+		const raw = row.geometry;
+		if (!raw) throw new Error(`Fila ${rowIndex}: geometry vacía`);
+
+		if (isLikelyGeoJSONGeometry(raw)) return raw;
+		return decodeWkbGeometry(raw);
+	  }
+
+	  function rowToFeature(row, rowIndex = null) {
+		const sourceGeometry = getGeometryFromRow(row, rowIndex);
+		const geom4326 = reprojectGeometry(sourceGeometry);
+
+		if (!geom4326) {
+		  throw new Error(`Fila ${rowIndex}: no se pudo reproyectar la geometría`);
+		}
+
+		return {
+		  type: 'Feature',
+		  geometry: geom4326,
+		  properties: {
+			terraza_id: Number(row.terraza_id),
+			rotulo: row.rotulo ?? '',
+			datetime: row.datetime,
+			date: toYMD(row.date ?? row.datetime),
+			hour: getHourFromDatetime(row.datetime),
+			shadow_area_m2: row.shadow_area_m2,
+			shadow_pct: row.shadow_pct,
+			terrace_area_m2: row.terrace_area_m2,
+			building_id: row.building_id,
+		  },
+		};
+	  }
+
+	  function normalizeDuckRow(row) {
+		if (!row) return row;
+		if (typeof row.toJSON === 'function') return row.toJSON();
+
+		const obj = {};
+		for (const key of Object.keys(row)) {
+		  const value = row[key];
+		  obj[key] = (value && typeof value.toJSON === 'function') ? value.toJSON() : value;
+		}
+		return obj;
+	  }
+
+	  async function arrowTableToRows(table) {
+		if (!table) return [];
+		const arr = table.toArray ? table.toArray() : [];
+		return arr.map(normalizeDuckRow);
+	  }
+
+	  /* ─── CATALOG ────────────────────────────────── */
+	  async function loadRotulosCatalog() {
+		try {
+		  const res = await fetch(ROTULOS_JSON_URL, { cache: 'no-store' });
+		  if (!res.ok) {
+			throw new Error(`No se pudo leer ${ROTULOS_JSON_URL}`);
+		  }
+
+		  const data = await res.json();
+		  if (!Array.isArray(data)) {
+			throw new Error('El JSON de rótulos no es un array');
+		  }
+
+		  rotulosCatalog = data.map(item => ({
+			...item,
+			terraza_id: Number(item.terraza_id),
+			_search_blob: normalizeText([
+			  item.label_busqueda,
+			  item.rotulo_formateado,
+			  item.rotulo_original,
+			  item.direccion_resumen,
+			  item.nombre_via,
+			  item.numero_via
+			].filter(Boolean).join(' '))
+		  })).filter(item => Number.isFinite(item.terraza_id));
+		} catch (err) {
+		  console.error(err);
+		  showStatus('No se pudo cargar el catálogo de rótulos', true);
+		}
+	  }
+
+	  function getItemDisplayLabel(item) {
+		return item.label_busqueda || item.rotulo_formateado || item.rotulo_original || `Terraza ${item.terraza_id}`;
+	  }
+
+	  function closeAC() {
+		acList.innerHTML = '';
+		acList.classList.remove('open');
+		currentSuggestions = [];
+		selectedSuggIdx = -1;
+	  }
+
+	  function renderAC(items) {
+		currentSuggestions = items;
+		selectedSuggIdx = -1;
+
+		if (!items.length) {
+		  closeAC();
+		  return;
+		}
+
+		acList.innerHTML = items.map((item, index) => {
+		  const title = escapeHtml(getItemDisplayLabel(item));
+		  const subtitle = item.direccion_resumen
+			? escapeHtml(item.direccion_resumen)
+			: escapeHtml(item.nombre_via || '');
+
+		  return `
+			<div class="ac-item" role="option" data-idx="${index}">
+			  <div class="ac-pin">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none">
+				  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+				</svg>
+			  </div>
+			  <div class="ac-text">
+				<div class="ac-title">${title}</div>
+				<div class="ac-sub">${subtitle}</div>
+			  </div>
+			</div>
+		  `;
+		}).join('');
+
+		acList.classList.add('open');
+
+		acList.querySelectorAll('.ac-item').forEach(el => {
+		  el.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			selectSuggestion(Number(el.dataset.idx));
+		  });
+		  el.addEventListener('touchend', (e) => {
+			e.preventDefault();
+			selectSuggestion(Number(el.dataset.idx));
+		  });
+		});
+	  }
+
+	  function highlightAC() {
+		acList.querySelectorAll('.ac-item').forEach((el, i) => {
+		  el.classList.toggle('active', i === selectedSuggIdx);
+		});
+	  }
+
+	  function searchCatalog(query) {
+		const q = normalizeText(query);
+		if (!q) return [];
+
+		const starts = [];
+		const contains = [];
+
+		for (const item of rotulosCatalog) {
+		  if (!item._search_blob.includes(q)) continue;
+
+		  const label = normalizeText(getItemDisplayLabel(item));
+		  if (label.startsWith(q)) {
+			starts.push(item);
+		  } else {
+			contains.push(item);
+		  }
+		}
+
+		return [...starts, ...contains].slice(0, 12);
+	  }
+
+	  function selectSuggestion(index) {
+		const item = currentSuggestions[index];
+		if (!item) return;
+
+		selectedTerraceId = item.terraza_id;
+		selectedRotulo = getItemDisplayLabel(item);
+		searchInput.value = selectedRotulo;
+		searchClear.classList.add('visible');
+		closeAC();
+
+		placeName.textContent = selectedRotulo;
+		placeName.classList.remove('empty');
+
+		setSheetState('mid');
+		scheduleLoad();
+	  }
+
+	  /* ─── DUCKDB ─────────────────────────────────── */
+	  async function initDuckDB() {
+		try {
+		  showStatus('Cargando motor de datos…', false, true);
+
+		  const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+		  const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+
+		  if (!bundle) {
+			throw new Error('No se pudo seleccionar un bundle de DuckDB-Wasm');
+		  }
+
+		  const workerUrl = URL.createObjectURL(
+			new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+		  );
+
+		  const worker = new Worker(workerUrl);
+		  const logger = new duckdb.ConsoleLogger();
+
+		  db = new duckdb.AsyncDuckDB(logger, worker);
+		  await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+
+		  URL.revokeObjectURL(workerUrl);
+
+		  conn = await db.connect();
+		  await conn.query(`SET enable_progress_bar = false;`);
+		  await conn.query(`SET threads = 1;`);
+
+		  hideStatus();
+		} catch (err) {
+		  showStatus('Error inicializando el motor de datos', true);
+		  console.error(err);
+		}
+	  }
+
+	  async function ensureWeekRegistered(dateString) {
+		if (!db) throw new Error('DuckDB no está inicializado');
+
+		const alias = buildWeekAlias(dateString);
+		const url = buildWeekUrl(dateString);
+
+		if (registeredWeekAliases.has(alias)) {
+		  return { alias, url };
+		}
+
+		await db.registerFileURL(
+		  alias,
+		  url,
+		  duckdb.DuckDBDataProtocol.HTTP,
+		  true
+		);
+
+		registeredWeekAliases.add(alias);
+		return { alias, url };
+	  }
+
+	  function buildDailyQuery(alias, terraceId, selectedDate, selectedHour) {
+		const representativeDate = getRepresentativeWednesdayDateForSelectedWeek(selectedDate);
+
+		return `
+		  SELECT
+			terraza_id,
+			rotulo,
+			datetime,
+			date,
+			shadow_area_m2,
+			shadow_pct,
+			terrace_area_m2,
+			building_id,
+			geometry
+		  FROM read_parquet('${alias}')
+		  WHERE terraza_id = ${Number(terraceId)}
+			AND substr(
+			  coalesce(cast(date as varchar), cast(datetime as varchar)),
+			  1,
+			  10
+			) = '${representativeDate}'
+			AND EXTRACT(HOUR FROM datetime) = ${Number(selectedHour)}
+		  ORDER BY datetime
+		`;
+	  }
+
+	  /* ─── LOAD & RENDER ──────────────────────────── */
+	  async function loadSelection() {
+		if (!db || !conn) {
+		  showStatus('DuckDB-Wasm aún no está cargado', true);
+		  return;
+		}
+
+		if (!selectedTerraceId) {
+		  return;
+		}
+
+		const selectedDate = dateInput.value;
+		const selectedHour = Number(hourSlider.value);
+
+		if (!selectedDate) {
+		  showStatus('Selecciona una fecha', true);
+		  return;
+		}
+
+		if (selectedDate < MIN_DATE || selectedDate > MAX_DATE) {
+		  showStatus(`La fecha debe estar entre ${MIN_DATE} y ${MAX_DATE}`, true);
+		  return;
+		}
+
+		try {
+		  showStatus('Consultando datos…', false, true);
+		  noResult.style.display = 'none';
+
+		  const { alias } = await ensureWeekRegistered(selectedDate);
+		  const sql = buildDailyQuery(alias, selectedTerraceId, selectedDate, selectedHour);
+
+		  const result = await conn.query(sql);
+		  const rows = await arrowTableToRows(result);
+
+		  currentDayFeatures = rows.map((row, i) => {
+			try {
+			  return rowToFeature(row, i);
+			} catch (err) {
+			  console.error(err);
+			  return null;
+			}
+		  }).filter(Boolean);
+
+		  clearLayer();
+
+		  if (!currentDayFeatures.length) {
+			resetSummary();
+			noResult.style.display = 'block';
+			hideStatus();
+			return;
+		  }
+
+		  currentLayer = L.geoJSON(currentDayFeatures, {
+			style: () => ({
+			  color: '#c0603a',
+			  weight: 2,
+			  fillColor: '#c0603a',
+			  fillOpacity: 0.30,
+			}),
+			onEachFeature: (feature, layer) => {
+			  const p = feature.properties;
+			  layer.bindPopup(`
+				<strong>${escapeHtml(p.rotulo || 'Terraza')}</strong><br>
+				Sombra: ${escapeHtml(formatPercent(p.shadow_pct))}
+			  `);
+			}
+		  }).addTo(map);
+
+		  try {
+			const bounds = currentLayer.getBounds();
+			if (bounds.isValid()) {
+			  map.fitBounds(bounds, {
+				padding: [40, 40],
+				maxZoom: 18
+			  });
+			}
+		  } catch (err) {
+			console.error(err);
+		  }
+
+		  const raw = currentDayFeatures[0].properties.shadow_pct;
+		  const pct = raw !== null && raw !== undefined ? (raw <= 1 ? raw * 100 : raw) : null;
+		  updateRing(pct);
+
+		  hideStatus();
+		} catch (err) {
+		  clearLayer();
+		  currentDayFeatures = [];
+		  resetSummary();
+		  showStatus('Error consultando los datos', true);
+		  console.error(err);
+		}
+	  }
+
+	  function scheduleLoad() {
+		clearTimeout(autoLoadTimeout);
+		autoLoadTimeout = setTimeout(() => {
+		  loadSelection();
+		}, 120);
+	  }
+
+	  /* ─── SEARCH EVENTS ──────────────────────────── */
+	  searchInput.addEventListener('input', () => {
+		const query = searchInput.value.trim();
+		searchClear.classList.toggle('visible', query.length > 0);
+		renderAC(searchCatalog(query));
+	  });
+
+	  searchInput.addEventListener('focus', () => {
+		const query = searchInput.value.trim();
+		if (!query) return;
+		renderAC(searchCatalog(query));
+	  });
+
+	  searchInput.addEventListener('keydown', (e) => {
+		if (!acList.classList.contains('open')) {
+		  if (e.key === 'Enter') {
+			const query = searchInput.value.trim();
+			const suggestions = searchCatalog(query);
+			if (suggestions.length === 1) {
+			  e.preventDefault();
+			  currentSuggestions = suggestions;
+			  selectSuggestion(0);
+			}
+		  }
+		  return;
+		}
+
+		if (e.key === 'ArrowDown') {
+		  e.preventDefault();
+		  selectedSuggIdx = Math.min(selectedSuggIdx + 1, currentSuggestions.length - 1);
+		  highlightAC();
+		} else if (e.key === 'ArrowUp') {
+		  e.preventDefault();
+		  selectedSuggIdx = Math.max(selectedSuggIdx - 1, 0);
+		  highlightAC();
+		} else if (e.key === 'Enter') {
+		  e.preventDefault();
+		  if (selectedSuggIdx >= 0) {
+			selectSuggestion(selectedSuggIdx);
+		  } else if (currentSuggestions.length === 1) {
+			selectSuggestion(0);
+		  }
+		} else if (e.key === 'Escape') {
+		  closeAC();
+		}
+	  });
+
+	  searchInput.addEventListener('blur', () => {
+		setTimeout(() => closeAC(), 150);
+	  });
+
+	  searchClear.addEventListener('click', () => {
+		searchInput.value = '';
+		searchClear.classList.remove('visible');
+		closeAC();
+		searchInput.focus();
+	  });
+
+	  document.addEventListener('click', (e) => {
+		if (!e.target.closest('#search-wrap')) {
+		  closeAC();
+		}
+	  });
+
+	  /* ─── CONTROL EVENTS ─────────────────────────── */
+	  dateInput.addEventListener('change', () => {
+		scheduleLoad();
+	  });
+
+	  dateInput.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') {
+		  loadSelection();
+		}
+	  });
+
+	  hourSlider.addEventListener('input', () => {
+		const hour = clampHour(hourSlider.value);
+		hourSlider.value = hour;
+		updateHour(hour);
+		scheduleLoad();
+	  });
+
+	  /* ─── DESKTOP LABEL ──────────────────────────── */
+	  function checkDesktop() {
+		if (window.innerWidth >= 720) desktopLabel.style.display = 'block';
+		else desktopLabel.style.display = 'none';
+	  }
+
+	  checkDesktop();
+	  window.addEventListener('resize', checkDesktop);
+
+	  /* ─── INIT ───────────────────────────────────── */
+	  updateHour(Number(hourSlider.value));
+	  resetSummary();
+	  setSheetState('peek', false);
+
+	  await loadRotulosCatalog();
+	  await initDuckDB();
+	</script>
 </body>
 </html>
