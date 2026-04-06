@@ -42,6 +42,7 @@
     }
 
     * { box-sizing: border-box; }
+
     html, body {
       margin: 0;
       padding: 0;
@@ -86,13 +87,6 @@
       color: var(--brand-dark);
     }
 
-    .subtitle {
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
     .hero {
       background: linear-gradient(135deg, #ffffff, #eef5fc);
       border: 1px solid var(--border-2);
@@ -104,9 +98,10 @@
 
     .controls {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: 1fr 1fr 1.35fr;
       gap: 12px;
       margin-top: 18px;
+      align-items: stretch;
     }
 
     .control-card {
@@ -143,6 +138,21 @@
     .control-card select:focus {
       border-color: var(--brand-2);
       box-shadow: 0 0 0 3px rgba(10,116,201,0.10);
+    }
+
+    .hour-range-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .hour-field-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 6px;
     }
 
     .content-grid {
@@ -189,100 +199,61 @@
     .winner-card {
       background: linear-gradient(135deg, #fff9ec, #fff3d6);
       border: 1px solid rgba(245,158,11,0.25);
-      border-radius: 22px;
-      padding: 18px;
+      border-radius: 18px;
+      padding: 14px;
       box-shadow: var(--shadow-sm);
     }
 
-    .winner-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 12px;
-    }
-
     .winner-kicker {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #a16207;
-      margin-bottom: 6px;
-    }
-
-    .winner-name {
-      font-size: 28px;
-      line-height: 1.08;
-      font-family: var(--font-display);
-      color: #7c5300;
-      margin: 0;
-    }
-
-    .winner-address {
-      margin-top: 8px;
-      font-size: 14px;
-      color: #8a6a25;
-      line-height: 1.45;
-    }
-
-    .winner-score {
-      min-width: 120px;
-      background: rgba(255,255,255,0.65);
-      border: 1px solid rgba(245,158,11,0.22);
-      border-radius: 18px;
-      padding: 12px;
-      text-align: center;
-    }
-
-    .winner-score-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #a16207;
-      margin-bottom: 6px;
-    }
-
-    .winner-score-value {
-      font-size: 26px;
-      font-weight: 800;
-      color: #7c5300;
-      line-height: 1;
-    }
-
-    .winner-score-sub {
-      margin-top: 6px;
-      font-size: 12px;
-      color: #8a6a25;
-    }
-
-    .winner-meta {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .meta-box {
-      background: rgba(255,255,255,0.7);
-      border: 1px solid rgba(245,158,11,0.18);
-      border-radius: 16px;
-      padding: 10px 12px;
-    }
-
-    .meta-label {
       font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.07em;
       color: #a16207;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
 
-    .meta-value {
-      font-size: 15px;
+    .winner-name {
+      font-size: 20px;
+      line-height: 1.1;
+      font-family: var(--font-display);
+      color: #7c5300;
+      margin: 0 0 4px 0;
+    }
+
+    .winner-address {
+      font-size: 14px;
+      color: #8a6a25;
+      line-height: 1.45;
+      margin-top: 8px;
+      margin-bottom: 10px;
+    }
+
+    .winner-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .winner-box {
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(245,158,11,0.18);
+      border-radius: 14px;
+      padding: 10px 11px;
+    }
+
+    .winner-box-label {
+      font-size: 10px;
       font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #a16207;
+      margin-bottom: 4px;
+    }
+
+    .winner-box-value {
+      font-size: 16px;
+      font-weight: 800;
       color: #7c5300;
       line-height: 1.2;
     }
@@ -379,18 +350,16 @@
     }
 
     @media (max-width: 980px) {
-      .controls,
-      .content-grid,
-      .winner-meta {
+      .controls {
         grid-template-columns: 1fr;
       }
 
-      .winner-top {
-        flex-direction: column;
+      .hour-range-group {
+        grid-template-columns: 1fr 1fr;
       }
 
-      .winner-score {
-        width: 100%;
+      .content-grid {
+        grid-template-columns: 1fr;
       }
 
       .rank-item {
@@ -406,6 +375,8 @@
         font-size: 21px;
       }
     }
+
+   
   </style>
 </head>
 <body>
@@ -416,27 +387,32 @@
 
     <section class="hero">
       <h1>Terrazas con más sol</h1>
+
       <div class="controls">
         <div class="control-card">
-          <div class="control-label">Fecha</div>
+          <div class="control-label">1. Fecha</div>
           <input id="weekDateInput" type="date" min="2026-01-01" max="2026-12-31" />
         </div>
 
         <div class="control-card">
-          <div class="control-label">Barrio</div>
+          <div class="control-label">2. Barrio</div>
           <select id="barrioSelect">
             <option value="">Todo Madrid</option>
           </select>
         </div>
 
         <div class="control-card">
-          <div class="control-label">Hora inicio</div>
-          <select id="hourStartSelect"></select>
-        </div>
-
-        <div class="control-card">
-          <div class="control-label">Hora fin</div>
-          <select id="hourEndSelect"></select>
+          <div class="control-label">3. Hora inicio y hora fin</div>
+          <div class="hour-range-group">
+            <div>
+              <div class="hour-field-label">Hora inicio</div>
+              <select id="hourStartSelect"></select>
+            </div>
+            <div>
+              <div class="hour-field-label">Hora fin</div>
+              <select id="hourEndSelect"></select>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -774,7 +750,6 @@
         renderWinner(enriched[0], weekDate, start, end, barrio);
         renderRanking(enriched.slice(0, 15));
 
-
       } catch (err) {
         console.error(err);
         winnerContainer.innerHTML = `<div class="empty">No se pudo calcular el ranking.</div>`;
@@ -791,29 +766,29 @@
 
       winnerContainer.innerHTML = `
         <div class="winner-card">
-          <div class="winner-top">
-            <div>
-              <div class="winner-kicker">Terraza con más sol de la semana</div>
-              <h3 class="winner-name">${escapeHtml(item.rotulo)}</h3>
-              <div class="winner-address">${escapeHtml(item.address)}</div>
+          <div class="winner-kicker">Terraza con más sol</div>
+          <h3 class="winner-name">${escapeHtml(item.rotulo)}</h3>
+          <div class="winner-address">${escapeHtml(item.address)}</div>
+
+          <div class="winner-grid">
+            <div class="winner-box">
+              <div class="winner-box-label">Sol medio</div>
+              <div class="winner-box-value">${escapeHtml(formatPct(item.avgSunPct))}</div>
             </div>
 
-            <div class="winner-score">
-              <div class="winner-score-label">Sol medio</div>
-              <div class="winner-score-value">${escapeHtml(formatPct(item.avgSunPct))}</div>
-              <div class="winner-score-sub">Menos sombra media</div>
-            </div>
-          </div>
-
-          <div class="winner-meta">
-            <div class="meta-box">
-              <div class="meta-label">Sombra media</div>
-              <div class="meta-value">${escapeHtml(formatPct(item.avgShadowPct))}</div>
+            <div class="winner-box">
+              <div class="winner-box-label">Sombra media</div>
+              <div class="winner-box-value">${escapeHtml(formatPct(item.avgShadowPct))}</div>
             </div>
 
-            <div class="meta-box">
-              <div class="meta-label">Barrio</div>
-              <div class="meta-value">${escapeHtml(item.barrio || '—')}</div>
+            <div class="winner-box">
+              <div class="winner-box-label">Barrio</div>
+              <div class="winner-box-value">${escapeHtml(item.barrio || '—')}</div>
+            </div>
+
+            <div class="winner-box">
+              <div class="winner-box-label">Horario</div>
+              <div class="winner-box-value">${escapeHtml(`${pad2(start)}:00–${pad2(end)}:00`)}</div>
             </div>
           </div>
         </div>
