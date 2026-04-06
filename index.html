@@ -642,6 +642,124 @@
 		  display: none !important;
 		}
 	  }
+	  
+	  
+	  
+	  .hidden {
+		  display: none !important;
+		}
+
+		.terrace-info-section {
+		  margin-top: 6px;
+		}
+
+		.terrace-info-card {
+		  background: var(--panel-2);
+		  border: 1px solid var(--border);
+		  border-radius: var(--radius-md);
+		  padding: 14px;
+		  display: grid;
+		  gap: 10px;
+		  box-shadow: var(--shadow-sm);
+		}
+
+		.terrace-info-title {
+		  font-size: 16px;
+		  font-weight: 700;
+		  color: var(--brand-dark);
+		  line-height: 1.2;
+		}
+
+		.terrace-info-subtitle {
+		  font-size: 12px;
+		  color: var(--muted);
+		  line-height: 1.4;
+		}
+
+		.terrace-info-grid {
+		  display: grid;
+		  grid-template-columns: 1fr 1fr;
+		  gap: 10px;
+		}
+
+		.info-pill {
+		  background: #fff;
+		  border: 1px solid var(--border);
+		  border-radius: 14px;
+		  padding: 10px 12px;
+		}
+
+		.info-pill-label {
+		  font-size: 10px;
+		  text-transform: uppercase;
+		  letter-spacing: 0.05em;
+		  color: var(--muted);
+		  margin-bottom: 4px;
+		  font-weight: 700;
+		}
+
+		.info-pill-value {
+		  font-size: 16px;
+		  font-weight: 700;
+		  color: var(--text);
+		}
+
+		.terrace-info-list {
+		  display: grid;
+		  gap: 8px;
+		}
+
+		.terrace-info-item {
+		  background: #fff;
+		  border: 1px solid var(--border);
+		  border-radius: 12px;
+		  padding: 10px 12px;
+		  font-size: 13px;
+		  color: var(--text);
+		  line-height: 1.4;
+		}
+
+		.terrace-info-item strong {
+		  color: var(--brand-dark);
+		}
+
+		.terrace-marker {
+		  background: var(--brand);
+		  border: 2px solid white;
+		  border-radius: 50%;
+		  box-shadow: 0 2px 8px rgba(0,94,168,0.28);
+		}
+
+		.terrace-marker.selected {
+		  background: var(--brand-dark);
+		  transform: scale(1.1);
+		}
+
+		@media (max-width: 719px) {
+		  .terrace-info-grid {
+			grid-template-columns: 1fr 1fr;
+		  }
+		}
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
 	</style>
 </head>
 <body>
@@ -712,9 +830,13 @@
             <div class="hour-hint">Desliza para cambiar la hora</div>
             <div class="hour-badge" id="hourBadge">12:00</div>
           </div>
-          <input id="hourSlider" type="range" min="6" max="22" step="1" value="12" aria-label="Hora" />
-          <div class="hour-range-labels"><span>6:00</span><span>22:00</span></div>
-        </div>
+          <input id="hourSlider" type="range" min="6" max="21" step="1" value="12" aria-label="Hora" />
+          <div class="hour-range-labels"><span>6:00</span><span>21:00</span></div>
+        </div>		
+		<div id="terrace-info-section" class="ctrl-section terrace-info-section hidden">
+		  <div class="ctrl-label">Información de la terraza</div>
+		  <div id="terrace-info-card" class="terrace-info-card"></div>
+		</div>
       </div>
     </div>
   </div>
@@ -734,7 +856,9 @@
     const FILE_BASENAME = 'terrace_shadows';
     const FILE_SUFFIX = '.parquet';
     const ROTULOS_JSON_URL = './rotulos_terrazas_index.json';
-
+	const TERRACES_GEOJSON_URL = './terrazas.geojson';
+	
+	
     const MIN_DATE = '2026-01-01';
     const MAX_DATE = '2026-12-31';
 
@@ -762,6 +886,10 @@
     let selectedSuggIdx = -1;
     let selectedTerraceId = null;
     let selectedRotulo = null;
+	
+	let terracesGeojson = null;
+	let terracesLayer = null;
+	let selectedTerraceFeature = null;
 
     const registeredWeekAliases = new Set();
 
@@ -782,6 +910,10 @@
     const desktopLabel = document.getElementById('desktop-label');
     const sheetClose = document.getElementById('sheet-close');
 	const handleArea = document.getElementById('sheet-handle-area');
+	
+	
+	const terraceInfoSection = document.getElementById('terrace-info-section');
+	const terraceInfoCard = document.getElementById('terrace-info-card');
 
     const map = L.map('map', {
       center: [40.4168, -3.7038],
@@ -876,6 +1008,7 @@
     document.addEventListener('mouseup', () => { if (isDragging) onDragEnd(); });
 	sheetClose.addEventListener('click', () => {
 	  setSheetState('peek');
+	  terraceInfoSection.classList.add('hidden');
 	});
 
     let statusTimeout = null;
@@ -901,7 +1034,7 @@
     }
 
     function clampHour(hour) {
-      return Math.max(6, Math.min(22, Number(hour)));
+      return Math.max(6, Math.min(21, Number(hour)));
     }
 
     function isFiniteNumber(v) {
@@ -938,6 +1071,102 @@
       const pct = n <= 1 ? n * 100 : n;
       return `${Math.min(pct, 100).toFixed(1)} %`;
     }
+	
+	
+	
+	
+	
+	function toIntOrDash(v) {
+	  const n = Number(v);
+	  return Number.isFinite(n) ? n : '—';
+	}
+
+	function boolToYesNo(v) {
+	  if (v === true) return 'Sí';
+	  if (v === false) return 'No';
+	  return '—';
+	}
+
+	function safeText(v) {
+	  if (v === null || v === undefined || v === '') return '—';
+	  return String(v).trim() || '—';
+	}
+
+	function buildHorarioText(props) {
+	  const lj = props.hora_ini_LJ_es && props.hora_fin_LJ_es
+		? `${props.hora_ini_LJ_es} – ${props.hora_fin_LJ_es}`
+		: null;
+
+	  const vs = props.hora_ini_VS_es && props.hora_fin_VS_es
+		? `${props.hora_ini_VS_es} – ${props.hora_fin_VS_es}`
+		: null;
+
+	  if (!lj && !vs) return '—';
+	  if (lj && vs) return `L-J: ${lj} · V-S: ${vs}`;
+	  return lj || vs;
+	}
+
+	function renderTerraceInfo(feature) {
+	  if (!feature || !feature.properties) {
+		terraceInfoSection.classList.add('hidden');
+		terraceInfoCard.innerHTML = '';
+		return;
+	  }
+
+	  const p = feature.properties;
+
+	  const totalEstufas =
+		(Number(p.estufas_gas_es) || 0) +
+		(Number(p.estufas_electricas_es) || 0);
+
+	  const toldos =
+		Number.isFinite(Number(p.toldos_pavimento_es))
+		  ? Number(p.toldos_pavimento_es)
+		  : 0;
+
+	  const subtitle = [
+		safeText(p.desc_nombre),
+		safeText(p.num_terraza),
+		safeText(p.desc_barrio_local)
+	  ].filter(v => v !== '—').join(' · ');
+
+	  terraceInfoCard.innerHTML = `
+		<div class="terrace-info-title">${escapeHtml(safeText(p.rotulo))}</div>
+		<div class="terrace-info-subtitle">${escapeHtml(subtitle || 'Terraza seleccionada')}</div>
+
+		<div class="terrace-info-grid">
+		  <div class="info-pill">
+			<div class="info-pill-label">Mesas</div>
+			<div class="info-pill-value">${escapeHtml(toIntOrDash(p.mesas_es))}</div>
+		  </div>
+		  <div class="info-pill">
+			<div class="info-pill-label">Sillas</div>
+			<div class="info-pill-value">${escapeHtml(toIntOrDash(p.sillas_es))}</div>
+		  </div>
+		  <div class="info-pill">
+			<div class="info-pill-label">Sombrillas</div>
+			<div class="info-pill-value">${escapeHtml(toIntOrDash(p.sombrillas_es))}</div>
+		  </div>
+		  <div class="info-pill">
+			<div class="info-pill-label">Toldos</div>
+			<div class="info-pill-value">${escapeHtml(toIntOrDash(toldos))}</div>
+		  </div>
+		</div>
+
+		<div class="terrace-info-list">
+		  <div class="terrace-info-item"><strong>Horario:</strong> ${escapeHtml(buildHorarioText(p))}</div>
+		  <div class="terrace-info-item"><strong>Estufas:</strong> ${escapeHtml(String(totalEstufas))}</div>
+		  <div class="terrace-info-item"><strong>Superficie:</strong> ${escapeHtml(
+			Number.isFinite(Number(p.Superficie_ES)) ? `${Number(p.Superficie_ES).toFixed(2)} m²` : '—'
+		  )}</div>
+		  <div class="terrace-info-item"><strong>Periodo:</strong> ${escapeHtml(safeText(p.desc_periodo_terraza))}</div>
+		  <div class="terrace-info-item"><strong>Ubicación:</strong> ${escapeHtml(safeText(p.desc_ubicacion_terraza))}</div>
+		  <div class="terrace-info-item"><strong>Suelo:</strong> ${escapeHtml(safeText(p.tipo_suelo_desc))}</div>
+		</div>
+	  `;
+
+	  terraceInfoSection.classList.remove('hidden');
+	}
 
     function updateRing(pct) {
       if (pct === null) {
@@ -1224,6 +1453,26 @@
         showStatus('No se pudo cargar el catálogo de rótulos', true);
       }
     }
+	
+	
+	
+	async function loadTerracesGeojson() {
+	  try {
+		const res = await fetch(TERRACES_GEOJSON_URL, { cache: 'no-store' });
+		if (!res.ok) throw new Error(`No se pudo leer ${TERRACES_GEOJSON_URL}`);
+
+		const data = await res.json();
+		if (!data || data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
+		  throw new Error('GeoJSON inválido');
+		}
+
+		terracesGeojson = data;
+		renderTerracesLayer();
+	  } catch (err) {
+		console.error(err);
+		showStatus('No se pudo cargar la capa de terrazas', true);
+	  }
+	}
 
     function getItemDisplayLabel(item) {
       return item.label_busqueda || item.rotulo_formateado || item.rotulo_original || `Terraza ${item.terraza_id}`;
@@ -1308,29 +1557,129 @@
     }
 
     function selectSuggestion(index) {
-      const item = currentSuggestions[index];
-      if (!item) return;
+	  const item = currentSuggestions[index];
+	  if (!item) return;
 
-      selectedTerraceId = item.terraza_id;
-      selectedRotulo = getItemDisplayLabel(item);
-      searchInput.value = selectedRotulo;
-      searchClear.classList.add('visible');
-      closeAC();
+	  const feature = findTerraceFeatureById(item.terraza_id);
+
+	  if (feature) {
+		selectTerraceFeature(feature);
+		return;
+	  }
+
+	  selectedTerraceId = item.terraza_id;
+	  selectedRotulo = getItemDisplayLabel(item);
+	  searchInput.value = selectedRotulo;
+	  searchClear.classList.add('visible');
+	  closeAC();
 	  searchInput.blur();
 	  document.activeElement?.blur();
 
-      placeName.textContent = selectedRotulo;
-      placeName.classList.remove('empty');
+	  placeName.textContent = selectedRotulo;
+	  placeName.classList.remove('empty');
 
-      /* importante: en móvil NO subimos el panel */
-      if (isMobileLayout()) {
-        setSheetState('mid');
-      } else {
-        setSheetState('mid');
-      }
+	  if (isMobileLayout()) {
+		setSheetState('mid');
+	  } else {
+		setSheetState('mid');
+	  }
 
-      scheduleLoad();
-    }
+	  scheduleLoad();
+	}
+	
+	
+	function createTerraceMarker(isSelected = false) {
+	  return L.circleMarker([0, 0], {
+		radius: isSelected ? 7 : 5,
+		color: '#ffffff',
+		weight: 2,
+		fillColor: isSelected ? '#0f3d68' : '#005ea8',
+		fillOpacity: 0.95
+	  });
+	}
+
+	function renderTerracesLayer() {
+	  if (!terracesGeojson) return;
+
+	  if (terracesLayer) {
+		map.removeLayer(terracesLayer);
+		terracesLayer = null;
+	  }
+
+	  terracesLayer = L.geoJSON(terracesGeojson, {
+		pointToLayer: (feature, latlng) => {
+		  const isSelected =
+			selectedTerraceId !== null &&
+			Number(feature?.properties?.id_terraza) === Number(selectedTerraceId);
+
+		  return L.circleMarker(latlng, {
+			radius: isSelected ? 7 : 5,
+			color: '#ffffff',
+			weight: 2,
+			fillColor: isSelected ? '#0f3d68' : '#005ea8',
+			fillOpacity: 0.95
+		  });
+		},
+		onEachFeature: (feature, layer) => {
+		  const p = feature.properties || {};
+		  layer.bindPopup(`
+			<strong>${escapeHtml(safeText(p.rotulo))}</strong><br>
+			Mesas: ${escapeHtml(String(toIntOrDash(p.mesas_es)))} ·
+			Sillas: ${escapeHtml(String(toIntOrDash(p.sillas_es)))}<br>
+			Sombrillas: ${escapeHtml(String(toIntOrDash(p.sombrillas_es)))}
+		  `);
+
+		  layer.on('click', () => {
+			selectTerraceFeature(feature);
+		  });
+		}
+	  }).addTo(map);
+	}
+
+	function findTerraceFeatureById(terraceId) {
+	  if (!terracesGeojson?.features?.length) return null;
+	  return terracesGeojson.features.find(
+		f => Number(f?.properties?.id_terraza) === Number(terraceId)
+	  ) || null;
+	}
+
+	function selectTerraceFeature(feature) {
+	  if (!feature?.properties) return;
+
+	  const terraceId = Number(feature.properties.id_terraza);
+	  if (!Number.isFinite(terraceId)) return;
+
+	  selectedTerraceFeature = feature;
+	  selectedTerraceId = terraceId;
+	  selectedRotulo = safeText(feature.properties.rotulo);
+
+	  searchInput.value = selectedRotulo;
+	  searchClear.classList.add('visible');
+	  closeAC();
+	  searchInput.blur();
+	  document.activeElement?.blur();
+
+	  placeName.textContent = selectedRotulo;
+	  placeName.classList.remove('empty');
+
+	  renderTerraceInfo(feature);
+	  renderTerracesLayer();
+
+	  if (feature.geometry?.type === 'Point' && Array.isArray(feature.geometry.coordinates)) {
+		const [lon, lat] = feature.geometry.coordinates;
+		if (Number.isFinite(lon) && Number.isFinite(lat)) {
+		  map.flyTo([lat, lon], Math.max(map.getZoom(), 17), { duration: 0.5 });
+		}
+	  }
+
+	  if (isMobileLayout()) {
+		setSheetState('mid');
+	  } else {
+		setSheetState('mid');
+	  }
+
+	  scheduleLoad();
+	}
 
     async function initDuckDB() {
       try {
@@ -1645,7 +1994,8 @@
     setSheetState('peek', false);
 
     await loadRotulosCatalog();
-    await initDuckDB();
+	await loadTerracesGeojson();
+	await initDuckDB();
   </script>
 </body>
 </html>
