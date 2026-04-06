@@ -276,8 +276,8 @@
 		background: rgba(102,120,138,0.35);
 	  }
 
-	  #sheet-content {
-		  padding: 0 16px 16px;
+		#sheet-content {
+		  padding: 38px 16px 16px;
 		  overflow-y: auto;
 		  overscroll-behavior: contain;
 		  position: relative;
@@ -285,7 +285,7 @@
 
 		#sheet-close {
 		  position: absolute;
-		  top: 2px;
+		  top: 8px;
 		  right: 14px;
 		  width: 30px;
 		  height: 30px;
@@ -299,7 +299,7 @@
 		  display: flex;
 		  align-items: center;
 		  justify-content: center;
-		  z-index: 5;
+		  z-index: 10;
 		  box-shadow: var(--shadow-sm);
 		}
 
@@ -586,7 +586,7 @@
 		#sheet-content {
 		  flex: 1;
 		  overflow-y: auto;
-		  padding: 20px 20px 24px;
+		  padding: 44px 20px 24px;
 		}
 
 		#search-overlay {
@@ -780,6 +780,7 @@
     const noResult = document.getElementById('no-result');
     const desktopLabel = document.getElementById('desktop-label');
     const sheetClose = document.getElementById('sheet-close');
+	const handleArea = document.getElementById('sheet-handle-area');
 
     const map = L.map('map', {
       center: [40.4168, -3.7038],
