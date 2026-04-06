@@ -2,301 +2,614 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Visor de sombras por terraza · DuckDB-Wasm</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Visor de Sombras · Terrazas</title>
   <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <style>
     :root {
-      --bg: #f3f5f9;
-      --panel: #ffffff;
-      --panel-2: #f8fafc;
-      --border: #d8dee8;
-      --text: #17202a;
-      --muted: #5f6b7a;
-      --accent: #0b57d0;
-      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-      --error: #b42318;
+      --sand:    #f5f0e8;
+      --cream:   #faf8f4;
+      --ivory:   #fffdf9;
+      --bark:    #3d2b1f;
+      --mahogany:#6b3a2a;
+      --terra:   #c0603a;
+      --amber:   #e8973a;
+      --sage:    #7a9e7e;
+      --sky:     #5b8fc9;
+      --dusk:    #2c3e50;
+
+      --surface:       rgba(255,253,249,0.96);
+      --surface-glass: rgba(255,253,249,0.85);
+      --border:        rgba(61,43,31,0.12);
+      --shadow-sm:     0 2px 8px rgba(61,43,31,0.08);
+      --shadow-md:     0 8px 24px rgba(61,43,31,0.12);
+      --shadow-lg:     0 20px 60px rgba(61,43,31,0.18);
+
+      --radius-sm:  12px;
+      --radius-md:  20px;
+      --radius-lg:  28px;
+      --radius-xl:  36px;
+
+      --font-display: 'DM Serif Display', serif;
+      --font-body:    'DM Sans', sans-serif;
+
+      --sheet-peek: 160px;
+      --sheet-mid:  55vh;
+      --sheet-full: 92vh;
+
+      --transition: cubic-bezier(0.32, 0.72, 0, 1);
     }
 
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     html, body {
-      margin: 0;
-      padding: 0;
       height: 100%;
-      font-family: Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      overflow: hidden;
+      font-family: var(--font-body);
+      background: var(--sand);
+      color: var(--bark);
     }
 
-    #app {
-      display: grid;
-      grid-template-columns: 380px 1fr;
-      height: 100%;
-    }
-
-    #sidebar {
-      overflow: auto;
-      padding: 18px;
-      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-      border-right: 1px solid var(--border);
-    }
-
+    /* ── MAP ─────────────────────────────────────── */
     #map {
-      width: 100%;
-      height: 100%;
+      position: fixed;
+      inset: 0;
+      z-index: 0;
     }
 
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: var(--shadow);
-      margin-bottom: 14px;
+    .leaflet-control-attribution {
+      font-size: 10px !important;
+      background: rgba(255,253,249,0.7) !important;
     }
 
-    .card h2 {
-      margin: 0 0 12px;
-      font-size: 15px;
+    /* ── SEARCH OVERLAY ──────────────────────────── */
+    #search-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 400;
+      padding: 12px 12px 0;
+      pointer-events: none;
     }
 
-    .field {
-      margin-bottom: 12px;
+    #search-wrap {
+      pointer-events: all;
       position: relative;
+      max-width: 480px;
+      margin: 0 auto;
     }
 
-    label {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    input {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 11px 12px;
-      font-size: 14px;
-      background: white;
-      color: var(--text);
-    }
-
-    input:focus {
-      outline: 2px solid rgba(11, 87, 208, 0.15);
-      border-color: var(--accent);
-    }
-
-    .inline {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
+    #search-bar {
+      display: flex;
       align-items: center;
-    }
-
-    .range-value {
-      min-width: 64px;
-      text-align: center;
-      font-weight: 700;
-      padding: 10px 8px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--panel-2);
-    }
-
-    #status {
-      margin-top: 10px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: #f6f8fb;
-      border: 1px solid var(--border);
-      font-size: 13px;
-      line-height: 1.45;
-      color: var(--muted);
-      white-space: pre-line;
-    }
-
-    .summary-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin-bottom: 12px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 0 16px;
+      box-shadow: var(--shadow-lg);
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    .metric {
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 12px;
+    #search-bar:focus-within {
+      border-color: var(--terra);
+      box-shadow: var(--shadow-lg), 0 0 0 3px rgba(192,96,58,0.12);
     }
 
-    .metric .label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--muted);
-      margin-bottom: 6px;
+    .search-icon {
+      flex-shrink: 0;
+      color: var(--mahogany);
+      opacity: 0.6;
     }
 
-    .metric .value {
-      font-size: 18px;
-      font-weight: 700;
-      line-height: 1.2;
+    #rotuloSearchInput {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: var(--font-body);
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--bark);
+      padding: 14px 0;
+      outline: none;
     }
 
-    .detail-list {
-      display: grid;
-      gap: 8px;
+    #rotuloSearchInput::placeholder {
+      color: var(--bark);
+      opacity: 0.38;
     }
 
-    .detail-item {
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      font-size: 13px;
-      line-height: 1.45;
+    #search-clear {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: var(--border);
+      color: var(--bark);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      line-height: 1;
+      opacity: 0.7;
+      transition: opacity 0.15s, background 0.15s;
     }
 
-    .muted-help {
-      margin-top: 6px;
-      font-size: 12px;
-      color: var(--muted);
-    }
+    #search-clear:hover { opacity: 1; background: rgba(61,43,31,0.18); }
+    #search-clear.visible { display: flex; }
 
-    .autocomplete-list {
+    /* Autocomplete */
+    #autocompleteList {
       position: absolute;
-      z-index: 2000;
       top: calc(100% + 6px);
       left: 0;
       right: 0;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      box-shadow: var(--shadow);
-      max-height: 260px;
-      overflow: auto;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      max-height: 56vh;
+      overflow-y: auto;
       display: none;
+      overscroll-behavior: contain;
     }
 
-    .autocomplete-item {
-      padding: 10px 12px;
-      border-bottom: 1px solid #eef2f7;
+    #autocompleteList.open { display: block; }
+
+    .ac-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+
+    .ac-item:last-child { border-bottom: none; }
+
+    .ac-item:hover, .ac-item.active {
+      background: rgba(192,96,58,0.06);
+    }
+
+    .ac-pin {
+      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--terra), var(--mahogany));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .ac-text { flex: 1; min-width: 0; }
+    .ac-title { font-size: 14px; font-weight: 500; color: var(--bark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ac-sub   { font-size: 12px; color: var(--bark); opacity: 0.5; margin-top: 1px; }
+
+    /* ── BOTTOM SHEET ────────────────────────────── */
+    #sheet {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 300;
+      background: var(--ivory);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      box-shadow: 0 -4px 40px rgba(61,43,31,0.14);
+      transition: transform 0.42s var(--transition);
+      max-width: 100vw;
+      will-change: transform;
+      touch-action: none;
+    }
+
+    /* Sheet states via data-state attribute */
+    #sheet[data-state="peek"]  { transform: translateY(calc(100% - var(--sheet-peek))); }
+    #sheet[data-state="mid"]   { transform: translateY(calc(100% - var(--sheet-mid))); }
+    #sheet[data-state="full"]  { transform: translateY(calc(100% - var(--sheet-full))); }
+
+    #sheet-handle-area {
+      padding: 14px 0 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      user-select: none;
+    }
+
+    #sheet-handle-area:active { cursor: grabbing; }
+
+    .handle-pill {
+      width: 40px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(61,43,31,0.18);
+    }
+
+    #sheet-content {
+      padding: 0 20px 40px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    /* Place header */
+    #place-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    #place-name {
+      font-family: var(--font-display);
+      font-size: 22px;
+      line-height: 1.2;
+      color: var(--bark);
+      flex: 1;
+    }
+
+    #place-name.empty { color: rgba(61,43,31,0.3); font-style: italic; }
+
+    /* Shadow arc */
+    #shadow-ring-wrap {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      background: linear-gradient(135deg, var(--sand), #ede7d9);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+
+    .ring-svg-wrap { flex-shrink: 0; position: relative; width: 72px; height: 72px; }
+
+    .ring-svg-wrap svg { width: 72px; height: 72px; transform: rotate(-90deg); }
+
+    #ring-track { stroke: rgba(61,43,31,0.1); }
+    #ring-fill  { stroke: var(--terra); stroke-linecap: round; transition: stroke-dashoffset 0.7s var(--transition); }
+
+    .ring-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 15px;
+      line-height: 1.1;
+      color: var(--bark);
+    }
+
+    .ring-label span { font-size: 10px; font-weight: 400; opacity: 0.55; }
+
+    .shadow-info { flex: 1; }
+    .shadow-info .info-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--terra); opacity: 0.8; margin-bottom: 4px; }
+    .shadow-info .info-value { font-size: 26px; font-weight: 600; color: var(--bark); line-height: 1; }
+    .shadow-info .info-note  { font-size: 12px; color: var(--bark); opacity: 0.45; margin-top: 4px; }
+
+    /* Controls */
+    .ctrl-section { margin-bottom: 18px; }
+
+    .ctrl-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--bark);
+      opacity: 0.45;
+      margin-bottom: 8px;
+    }
+
+    /* Date picker */
+    #dateInput {
+      width: 100%;
+      font-family: var(--font-body);
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--bark);
+      background: var(--sand);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    #dateInput:focus { border-color: var(--terra); }
+
+    /* Hour slider */
+    .hour-track-wrap {
+      background: var(--sand);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px 10px;
+    }
+
+    .hour-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .hour-badge {
+      background: linear-gradient(135deg, var(--terra), var(--mahogany));
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .hour-range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--bark);
+      opacity: 0.4;
+      margin-top: 6px;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(61,43,31,0.12);
+      outline: none;
       cursor: pointer;
     }
 
-    .autocomplete-item:last-child {
-      border-bottom: none;
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--ivory);
+      border: 3px solid var(--terra);
+      box-shadow: 0 2px 8px rgba(192,96,58,0.3);
+      cursor: grab;
     }
 
-    .autocomplete-item:hover,
-    .autocomplete-item.active {
-      background: #f3f7ff;
+    input[type=range]::-webkit-slider-thumb:active { cursor: grabbing; }
+
+    input[type=range]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--ivory);
+      border: 3px solid var(--terra);
+      box-shadow: 0 2px 8px rgba(192,96,58,0.3);
+      cursor: grab;
     }
 
-    .autocomplete-title {
-      font-size: 14px;
-      color: var(--text);
-      line-height: 1.35;
+    /* Status pill */
+    #status-pill {
+      position: fixed;
+      bottom: calc(var(--sheet-peek) + 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 350;
+      background: var(--bark);
+      color: var(--cream);
+      font-size: 13px;
+      padding: 8px 18px;
+      border-radius: 20px;
+      white-space: nowrap;
+      box-shadow: var(--shadow-md);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s, bottom 0.42s var(--transition);
     }
 
-    .autocomplete-subtitle {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
-      line-height: 1.35;
+    #status-pill.visible { opacity: 1; }
+    #status-pill.error { background: #8b2e20; }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
     }
 
-    .hidden {
-      display: none !important;
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* No result state */
+    #no-result {
+      display: none;
+      text-align: center;
+      padding: 28px 0 16px;
+      color: var(--bark);
+      opacity: 0.4;
     }
 
-    @media (max-width: 980px) {
-      #app {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
+    #no-result svg { margin-bottom: 8px; }
+    #no-result p { font-size: 14px; }
+
+    /* ── DESKTOP LAYOUT ──────────────────────────── */
+    @media (min-width: 720px) {
+      :root {
+        --sheet-peek: 0px;
+        --sheet-mid: 0px;
+        --sheet-full: 0px;
       }
 
-      #sidebar {
-        border-right: none;
-        border-bottom: 1px solid var(--border);
+      #sheet {
+        position: fixed;
+        left: 16px;
+        top: 80px;
+        bottom: 16px;
+        right: auto;
+        width: 360px;
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-lg);
+        transform: none !important;
+        transition: none;
+        touch-action: auto;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
       }
+
+      #sheet[data-state] { transform: none !important; }
+
+      #sheet-handle-area { display: none; }
+
+      #sheet-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 20px 28px;
+      }
+
+      #search-overlay {
+        left: 16px;
+        right: auto;
+        width: 360px;
+        padding: 16px 0 0;
+      }
+
+      #search-wrap { max-width: none; }
+
+      #status-pill {
+        bottom: 28px;
+        left: 50%;
+      }
+    }
+
+    @media (min-width: 720px) {
+      #sheet-content { padding-top: 20px; }
+    }
+
+    /* Scrollbar */
+    #sheet-content::-webkit-scrollbar { width: 4px; }
+    #sheet-content::-webkit-scrollbar-track { background: transparent; }
+    #sheet-content::-webkit-scrollbar-thumb { background: rgba(61,43,31,0.15); border-radius: 2px; }
+
+    /* Sheet desktop header */
+    .sheet-top-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--terra);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0;
     }
   </style>
 </head>
 <body>
-  <div id="app">
-    <aside id="sidebar">
-      <div class="card">
-        <h2>Búsqueda</h2>
 
-        <div class="field">
-          <label for="rotuloSearchInput">Buscar por rótulo</label>
-          <input
-            id="rotuloSearchInput"
-            type="text"
-            placeholder="Escribe un nombre, por ejemplo: anun"
-            autocomplete="off"
-          />
-          <div id="autocompleteList" class="autocomplete-list"></div>
-          <div class="muted-help">Puedes escribir parte del nombre y elegir una sugerencia.</div>
-        </div>
+  <!-- MAP -->
+  <div id="map"></div>
 
-        <div class="field">
-          <label for="terraceIdInput">ID de terraza</label>
-          <input id="terraceIdInput" type="number" min="1" step="1" value="318" placeholder="Ej. 318" />
-        </div>
-
-        <div class="field">
-          <label for="dateInput">Fecha</label>
-          <input id="dateInput" type="date" value="2026-01-01" min="2026-01-01" max="2026-12-31" />
-        </div>
-
-        <div class="field">
-          <label for="hourSlider">Hora</label>
-          <div class="inline">
-            <input id="hourSlider" type="range" min="6" max="22" step="1" value="12" />
-            <div id="hourValue" class="range-value">12:00</div>
-          </div>
-        </div>
-
-        <div id="status">Inicializando...</div>
+  <!-- SEARCH OVERLAY -->
+  <div id="search-overlay">
+    <div id="search-wrap">
+      <div id="search-bar">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="rotuloSearchInput" type="text" placeholder="Buscar terraza…" autocomplete="off" autocorrect="off" spellcheck="false" />
+        <button id="search-clear" aria-label="Borrar búsqueda">×</button>
       </div>
-
-      <div class="card">
-        <h2>Resumen</h2>
-
-        <div class="summary-grid">
-          <div class="metric">
-            <div class="label">Sombra</div>
-            <div id="metricShadowPct" class="value">—</div>
-          </div>
-          <div class="metric">
-            <div class="label">Área sombra</div>
-            <div id="metricShadowArea" class="value">—</div>
-          </div>
-          <div class="metric">
-            <div class="label">Área terraza</div>
-            <div id="metricTerraceArea" class="value">—</div>
-          </div>
-          <div class="metric">
-            <div class="label">Semana ISO</div>
-            <div id="metricWeek" class="value">—</div>
-          </div>
-        </div>
-
-        <div id="summaryDetails" class="detail-list">
-          <div class="detail-item">Rótulo: —</div>
-        </div>
-      </div>
-    </aside>
-
-    <main id="map"></main>
+      <div id="autocompleteList" role="listbox"></div>
+    </div>
   </div>
+
+  <!-- BOTTOM SHEET -->
+  <div id="sheet" data-state="peek" role="complementary" aria-label="Información de terraza">
+    <div id="sheet-handle-area" aria-hidden="true">
+      <div class="handle-pill"></div>
+    </div>
+
+    <div id="sheet-content">
+      <!-- Desktop label -->
+      <span class="sheet-top-label" style="display:none" id="desktop-label">Visor de Sombras</span>
+
+      <!-- Place header -->
+      <div id="place-header">
+        <div id="place-name" class="empty">Selecciona una terraza</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Shadow ring -->
+      <div id="shadow-ring-wrap">
+        <div class="ring-svg-wrap">
+          <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle id="ring-track" cx="36" cy="36" r="28" fill="none" stroke-width="7"/>
+            <circle id="ring-fill"  cx="36" cy="36" r="28" fill="none" stroke-width="7"
+              stroke-dasharray="175.93"
+              stroke-dashoffset="175.93"/>
+          </svg>
+          <div class="ring-label" id="ring-label-text">—<br><span>sombra</span></div>
+        </div>
+        <div class="shadow-info">
+          <div class="info-label">Sombra estimada</div>
+          <div class="info-value" id="shadow-pct-value">—</div>
+          <div class="info-note" id="shadow-time-note">Selecciona lugar, fecha y hora</div>
+        </div>
+      </div>
+
+      <!-- No result -->
+      <div id="no-result">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+        <p>Sin datos para esta selección</p>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Date -->
+      <div class="ctrl-section">
+        <div class="ctrl-label">Fecha</div>
+        <input id="dateInput" type="date" value="2026-01-01" min="2026-01-01" max="2026-12-31" />
+      </div>
+
+      <!-- Hour -->
+      <div class="ctrl-section">
+        <div class="ctrl-label">Hora del día</div>
+        <div class="hour-track-wrap">
+          <div class="hour-header">
+            <div style="font-size:13px;font-weight:500;color:var(--bark);opacity:0.6">Desliza para cambiar la hora</div>
+            <div class="hour-badge" id="hourBadge">12:00</div>
+          </div>
+          <input id="hourSlider" type="range" min="6" max="22" step="1" value="12" aria-label="Hora" />
+          <div class="hour-range-labels"><span>6:00</span><span>22:00</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS PILL -->
+  <div id="status-pill" role="status" aria-live="polite"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.2/proj4.js"></script>
@@ -306,796 +619,541 @@
     import wkx from 'https://esm.sh/wkx';
     import { Buffer } from 'https://esm.sh/buffer';
 
-    const BUCKET_BASE_URL = 'https://pub-048f4919d8bc472898a82c1bca238348.r2.dev/weekly_parquet';
+    /* ─── CONFIG ─────────────────────────────────── */
+    const BUCKET_BASE_URL   = 'https://pub-048f4919d8bc472898a82c1bca238348.r2.dev/weekly_parquet';
     const FILE_YEAR_IN_BUCKET = 2025;
-    const FILE_BASENAME = 'terrace_shadows';
-    const FILE_SUFFIX = '.parquet';
-
-    const ROTULOS_JSON_URL = './rotulos_terrazas_index.json';
-
+    const FILE_BASENAME     = 'terrace_shadows';
+    const FILE_SUFFIX       = '.parquet';
+    const ROTULOS_JSON_URL  = './rotulos_terrazas_index.json';
     const MIN_DATE = '2026-01-01';
     const MAX_DATE = '2026-12-31';
-
     const SOURCE_EPSG = 'EPSG:25830';
     const TARGET_EPSG = 'EPSG:4326';
+    const RING_CIRCUMFERENCE = 2 * Math.PI * 28; // ≈ 175.93
 
-    let db = null;
-    let conn = null;
+    /* ─── STATE ──────────────────────────────────── */
+    let db = null, conn = null;
     let currentLayer = null;
     let currentDayFeatures = [];
-    let currentRecord = null;
     let autoLoadTimeout = null;
-
     let rotulosCatalog = [];
-    let selectedSuggestionIndex = -1;
     let currentSuggestions = [];
-
+    let selectedSuggIdx = -1;
+    let selectedTerraceId = null;
+    let selectedRotulo = null;
     const registeredWeekAliases = new Set();
 
-    const rotuloSearchInput = document.getElementById('rotuloSearchInput');
-    const autocompleteList = document.getElementById('autocompleteList');
-    const terraceIdInput = document.getElementById('terraceIdInput');
-    const dateInput = document.getElementById('dateInput');
-    const hourSlider = document.getElementById('hourSlider');
-    const hourValue = document.getElementById('hourValue');
+    /* ─── DOM ────────────────────────────────────── */
+    const searchInput    = document.getElementById('rotuloSearchInput');
+    const searchClear    = document.getElementById('search-clear');
+    const acList         = document.getElementById('autocompleteList');
+    const dateInput      = document.getElementById('dateInput');
+    const hourSlider     = document.getElementById('hourSlider');
+    const hourBadge      = document.getElementById('hourBadge');
+    const statusPill     = document.getElementById('status-pill');
+    const sheet          = document.getElementById('sheet');
+    const placeName      = document.getElementById('place-name');
+    const shadowPctVal   = document.getElementById('shadow-pct-value');
+    const shadowTimeNote = document.getElementById('shadow-time-note');
+    const ringFill       = document.getElementById('ring-fill');
+    const ringLabelText  = document.getElementById('ring-label-text');
+    const noResult       = document.getElementById('no-result');
+    const desktopLabel   = document.getElementById('desktop-label');
 
-    const statusBox = document.getElementById('status');
-    const metricShadowPct = document.getElementById('metricShadowPct');
-    const metricShadowArea = document.getElementById('metricShadowArea');
-    const metricTerraceArea = document.getElementById('metricTerraceArea');
-    const metricWeek = document.getElementById('metricWeek');
-    const summaryDetails = document.getElementById('summaryDetails');
+    /* ─── MAP ────────────────────────────────────── */
+    const map = L.map('map', { center: [40.4168,-3.7038], zoom: 13, preferCanvas: true, zoomControl: false });
 
-    const map = L.map('map', {
-      center: [40.4168, -3.7038],
-      zoom: 13,
-      preferCanvas: true,
-    });
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
-      maxZoom: 20,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd', maxZoom: 20,
+      attribution: '© OpenStreetMap © CARTO'
     }).addTo(map);
 
-    proj4.defs(
-      SOURCE_EPSG,
-      '+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs +type=crs'
-    );
-    proj4.defs(
-      TARGET_EPSG,
-      '+proj=longlat +datum=WGS84 +no_defs +type=crs'
-    );
+    L.control.zoom({ position: 'topright' }).addTo(map);
 
-    function setStatus(msg, isError = false) {
-      statusBox.textContent = msg;
-      statusBox.style.color = isError ? 'var(--error)' : 'var(--muted)';
+    /* ─── PROJ ───────────────────────────────────── */
+    proj4.defs(SOURCE_EPSG, '+proj=utm +zone=30 +ellps=GRS80 +units=m +no_defs +type=crs');
+    proj4.defs(TARGET_EPSG, '+proj=longlat +datum=WGS84 +no_defs +type=crs');
+
+    /* ─── SHEET DRAG (MOBILE) ────────────────────── */
+    const sheetStates  = ['peek','mid','full'];
+    let sheetState     = 'peek';
+    let dragStartY     = 0;
+    let dragStartState = 'peek';
+    let isDragging     = false;
+    let dragDelta      = 0;
+
+    const peekH  = () => parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sheet-peek')) || 160;
+    const midH   = () => window.innerHeight * 0.55;
+    const fullH  = () => window.innerHeight * 0.92;
+
+    function setSheetState(state, animate = true) {
+      sheetState = state;
+      if (!animate) sheet.style.transition = 'none';
+      sheet.dataset.state = state;
+      if (!animate) setTimeout(() => sheet.style.transition = '', 50);
+
+      const h = state === 'peek' ? peekH() : state === 'mid' ? midH() : fullH();
+      statusPill.style.bottom = (h + 12) + 'px';
     }
 
-    function updateHourLabel(hour) {
-      hourValue.textContent = `${String(hour).padStart(2, '0')}:00`;
+    const handleArea = document.getElementById('sheet-handle-area');
+
+    function onDragStart(clientY) {
+      isDragging = true;
+      dragStartY = clientY;
+      dragStartState = sheetState;
+      dragDelta = 0;
+      sheet.style.transition = 'none';
     }
 
-    function clampHour(hour) {
-      return Math.max(6, Math.min(22, Number(hour)));
+    function onDragMove(clientY) {
+      if (!isDragging) return;
+      dragDelta = dragStartY - clientY;
     }
 
-    function isFiniteNumber(v) {
-      return Number.isFinite(Number(v));
-    }
+    function onDragEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      sheet.style.transition = '';
 
-    function toNumberOrNull(v) {
-      if (v === null || v === undefined) return null;
-      const n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    }
-
-    function formatArea(v) {
-      const n = toNumberOrNull(v);
-      if (n === null) return '—';
-      return `${n.toFixed(2)} m²`;
-    }
-
-    function formatPercent(v) {
-      const n = toNumberOrNull(v);
-      if (n === null) return '—';
-      const pct = n <= 1 ? n * 100 : n;
-      return `${pct.toFixed(1)} %`;
-    }
-
-    function escapeHtml(str) {
-      return String(str ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-    }
-
-    function normalizeText(text) {
-      return String(text ?? '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, ' ');
-    }
-
-    function clearLayer() {
-      if (currentLayer) {
-        map.removeLayer(currentLayer);
-        currentLayer = null;
+      const threshold = 60;
+      if (dragStartState === 'peek') {
+        setSheetState(dragDelta > threshold ? 'mid' : 'peek');
+      } else if (dragStartState === 'mid') {
+        if (dragDelta > threshold) setSheetState('full');
+        else if (dragDelta < -threshold) setSheetState('peek');
+        else setSheetState('mid');
+      } else {
+        setSheetState(dragDelta < -threshold ? 'mid' : 'full');
       }
     }
 
-    function resetSummary() {
-      metricShadowPct.textContent = '—';
-      metricShadowArea.textContent = '—';
-      metricTerraceArea.textContent = '—';
-      metricWeek.textContent = '—';
-      summaryDetails.innerHTML = `<div class="detail-item">Rótulo: —</div>`;
-      currentRecord = null;
-    }
+    handleArea.addEventListener('touchstart', e => { onDragStart(e.touches[0].clientY); }, { passive: true });
+    handleArea.addEventListener('touchmove',  e => { onDragMove(e.touches[0].clientY); }, { passive: true });
+    handleArea.addEventListener('touchend',   () => onDragEnd());
+    handleArea.addEventListener('mousedown',  e => onDragStart(e.clientY));
+    document.addEventListener('mousemove',    e => { if (isDragging) onDragMove(e.clientY); });
+    document.addEventListener('mouseup',      () => { if (isDragging) onDragEnd(); });
 
-    function toYMD(value) {
-      if (!value) return null;
-
-      if (typeof value === 'string') {
-        const m = value.match(/^(\d{4}-\d{2}-\d{2})/);
-        if (m) return m[1];
-      }
-
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return null;
-
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    }
-
-    function getHourFromDatetime(value) {
-      if (!value) return null;
-
-      if (typeof value === 'string') {
-        const m = value.match(/T(\d{2}):/);
-        if (m) return Number(m[1]);
-
-        const m2 = value.match(/ (\d{2}):/);
-        if (m2) return Number(m2[1]);
-      }
-
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return null;
-
-      return d.getHours();
-    }
-
-    function getIsoWeekInfo(dateString) {
-      const date = new Date(dateString + 'T00:00:00');
-      if (Number.isNaN(date.getTime())) {
-        throw new Error(`Fecha inválida: ${dateString}`);
-      }
-
-      const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-      const dayNum = tmp.getUTCDay() || 7;
-      tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
-
-      const isoYear = tmp.getUTCFullYear();
-      const yearStart = new Date(Date.UTC(isoYear, 0, 1));
-      const isoWeek = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
-
-      return { isoYear, isoWeek };
-    }
-
-    function getIsoWeekDate(isoYear, isoWeek, isoWeekday) {
-      const simple = new Date(Date.UTC(isoYear, 0, 4 + (isoWeek - 1) * 7));
-      const dow = simple.getUTCDay() || 7;
-      simple.setUTCDate(simple.getUTCDate() - dow + isoWeekday);
-
-      const y = simple.getUTCFullYear();
-      const m = String(simple.getUTCMonth() + 1).padStart(2, '0');
-      const d = String(simple.getUTCDate()).padStart(2, '0');
-
-      return `${y}-${m}-${d}`;
-    }
-
-    function getRepresentativeWednesdayDateForSelectedWeek(selectedDate) {
-      const { isoWeek } = getIsoWeekInfo(selectedDate);
-      return getIsoWeekDate(FILE_YEAR_IN_BUCKET, isoWeek, 3);
-    }
-
-    function buildWeekFileName(dateString) {
-      const { isoWeek } = getIsoWeekInfo(dateString);
-      return `${FILE_BASENAME}_${FILE_YEAR_IN_BUCKET}_W${String(isoWeek).padStart(2, '0')}${FILE_SUFFIX}`;
-    }
-
-    function buildWeekUrl(dateString) {
-      return `${BUCKET_BASE_URL}/${buildWeekFileName(dateString)}`;
-    }
-
-    function buildWeekAlias(dateString) {
-      const { isoWeek } = getIsoWeekInfo(dateString);
-      return `week_${FILE_YEAR_IN_BUCKET}_W${String(isoWeek).padStart(2, '0')}.parquet`;
-    }
-
-    function transformCoords25830To4326(coords) {
-      if (!Array.isArray(coords)) return coords;
-
-      if (coords.length >= 2 && !Array.isArray(coords[0])) {
-        const x = Number(coords[0]);
-        const y = Number(coords[1]);
-
-        if (!isFiniteNumber(x) || !isFiniteNumber(y)) {
-          throw new Error(`Coordenadas no finitas detectadas`);
-        }
-
-        const result = proj4(SOURCE_EPSG, TARGET_EPSG, [x, y]);
-        const lon = Number(result[0]);
-        const lat = Number(result[1]);
-
-        if (!isFiniteNumber(lon) || !isFiniteNumber(lat)) {
-          throw new Error(`Reproyección inválida`);
-        }
-
-        return [lon, lat];
-      }
-
-      return coords.map(transformCoords25830To4326);
-    }
-
-    function reprojectGeometry(geometry) {
-      if (!geometry || !geometry.type) return null;
-
-      if (geometry.type === 'GeometryCollection') {
-        return {
-          ...geometry,
-          geometries: (geometry.geometries || [])
-            .map(reprojectGeometry)
-            .filter(Boolean),
-        };
-      }
-
-      if (!geometry.coordinates) return null;
-
-      return {
-        ...geometry,
-        coordinates: transformCoords25830To4326(geometry.coordinates),
-      };
-    }
-
-    function toUint8Array(value) {
-      if (!value) return null;
-
-      if (value instanceof Uint8Array) return value;
-      if (value instanceof ArrayBuffer) return new Uint8Array(value);
-      if (Array.isArray(value)) return new Uint8Array(value);
-
-      if (ArrayBuffer.isView(value)) {
-        return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
-      }
-
-      if (typeof value === 'object') {
-        const vals = Object.values(value);
-        if (vals.length && vals.every(v => Number.isFinite(Number(v)))) {
-          return new Uint8Array(vals.map(v => Number(v)));
-        }
-      }
-
-      return null;
-    }
-
-    function isLikelyGeoJSONGeometry(value) {
-      return (
-        value &&
-        typeof value === 'object' &&
-        typeof value.type === 'string' &&
-        (Array.isArray(value.coordinates) || Array.isArray(value.geometries))
-      );
-    }
-
-    function decodeWkbGeometry(value) {
-      if (!value) {
-        throw new Error('geometry vacía');
-      }
-
-      if (typeof value === 'string') {
-        const geom = wkx.Geometry.parse(value);
-        return geom.toGeoJSON();
-      }
-
-      const bytes = toUint8Array(value);
-      if (!bytes) {
-        throw new Error(`No se pudo convertir geometry`);
-      }
-
-      const geom = wkx.Geometry.parse(Buffer.from(bytes));
-      return geom.toGeoJSON();
-    }
-
-    function getGeometryFromRow(row, rowIndex) {
-      const raw = row.geometry;
-      if (!raw) throw new Error(`Fila ${rowIndex}: geometry vacía`);
-
-      if (isLikelyGeoJSONGeometry(raw)) return raw;
-      return decodeWkbGeometry(raw);
-    }
-
-    function rowToFeature(row, rowIndex = null) {
-      const sourceGeometry = getGeometryFromRow(row, rowIndex);
-      const geom4326 = reprojectGeometry(sourceGeometry);
-
-      if (!geom4326) {
-        throw new Error(`Fila ${rowIndex}: no se pudo reproyectar la geometría`);
-      }
-
-      return {
-        type: 'Feature',
-        geometry: geom4326,
-        properties: {
-          terraza_id: Number(row.terraza_id),
-          rotulo: row.rotulo ?? '',
-          datetime: row.datetime,
-          date: toYMD(row.date ?? row.datetime),
-          hour: getHourFromDatetime(row.datetime),
-          shadow_area_m2: row.shadow_area_m2,
-          shadow_pct: row.shadow_pct,
-          terrace_area_m2: row.terrace_area_m2,
-          building_id: row.building_id,
-        },
-      };
-    }
-
-    function normalizeDuckRow(row) {
-      if (!row) return row;
-      if (typeof row.toJSON === 'function') return row.toJSON();
-
-      const obj = {};
-      for (const key of Object.keys(row)) {
-        const value = row[key];
-        obj[key] = (value && typeof value.toJSON === 'function') ? value.toJSON() : value;
-      }
-      return obj;
-    }
-
-    async function arrowTableToRows(table) {
-      if (!table) return [];
-      const arr = table.toArray ? table.toArray() : [];
-      return arr.map(normalizeDuckRow);
-    }
-
-    async function loadRotulosCatalog() {
-      try {
-        const res = await fetch(ROTULOS_JSON_URL, { cache: 'no-store' });
-        if (!res.ok) {
-          throw new Error(`No se pudo leer ${ROTULOS_JSON_URL}`);
-        }
-
-        const data = await res.json();
-        if (!Array.isArray(data)) {
-          throw new Error('El JSON de rótulos no es un array');
-        }
-
-        rotulosCatalog = data.map(item => ({
-          ...item,
-          terraza_id: Number(item.terraza_id),
-          _search_blob: normalizeText([
-            item.label_busqueda,
-            item.rotulo_formateado,
-            item.rotulo_original,
-            item.direccion_resumen,
-            item.nombre_via,
-            item.numero_via
-          ].filter(Boolean).join(' '))
-        })).filter(item => Number.isFinite(item.terraza_id));
-      } catch (err) {
-        console.error(err);
-        setStatus('No se pudo cargar el catálogo de rótulos.', true);
+    /* ─── STATUS ─────────────────────────────────── */
+    let statusTimeout = null;
+    function showStatus(msg, isError = false, loading = false) {
+      statusPill.innerHTML = loading ? `<span class="spinner"></span>${msg}` : msg;
+      statusPill.className = 'visible' + (isError ? ' error' : '');
+      clearTimeout(statusTimeout);
+      if (!loading) {
+        statusTimeout = setTimeout(() => { statusPill.className = ''; }, 2800);
       }
     }
 
-    function getItemDisplayLabel(item) {
+    function hideStatus() {
+      clearTimeout(statusTimeout);
+      statusPill.className = '';
+    }
+
+    /* ─── HOUR ───────────────────────────────────── */
+    function updateHour(h) {
+      hourBadge.textContent = `${String(h).padStart(2,'0')}:00`;
+    }
+
+    /* ─── RING ───────────────────────────────────── */
+    function updateRing(pct) {
+      if (pct === null) {
+        ringFill.style.strokeDashoffset = RING_CIRCUMFERENCE;
+        ringLabelText.innerHTML = '—<br><span>sombra</span>';
+        shadowPctVal.textContent = '—';
+        shadowTimeNote.textContent = 'Selecciona lugar, fecha y hora';
+        return;
+      }
+      const capped = Math.min(pct, 100);
+      const offset = RING_CIRCUMFERENCE * (1 - capped / 100);
+      ringFill.style.strokeDashoffset = offset;
+      ringLabelText.innerHTML = `${capped.toFixed(0)}%<br><span>sombra</span>`;
+      shadowPctVal.textContent = `${capped.toFixed(1)} %`;
+      shadowTimeNote.textContent = `${String(hourSlider.value).padStart(2,'0')}:00 · ${dateInput.value}`;
+    }
+
+    /* ─── AUTOCOMPLETE ───────────────────────────── */
+    function normalizeText(t) {
+      return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/\s+/g,' ');
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+    }
+
+    function getLabel(item) {
       return item.label_busqueda || item.rotulo_formateado || item.rotulo_original || `Terraza ${item.terraza_id}`;
     }
 
-    function hideAutocomplete() {
-      autocompleteList.innerHTML = '';
-      autocompleteList.style.display = 'none';
-      currentSuggestions = [];
-      selectedSuggestionIndex = -1;
-    }
-
-    function renderAutocomplete(items) {
-      currentSuggestions = items;
-      selectedSuggestionIndex = -1;
-
-      if (!items.length) {
-        hideAutocomplete();
-        return;
-      }
-
-      autocompleteList.innerHTML = items.map((item, index) => {
-        const title = escapeHtml(getItemDisplayLabel(item));
-        const subtitle = `ID ${item.terraza_id}${item.direccion_resumen ? ' · ' + escapeHtml(item.direccion_resumen) : ''}`;
-
-        return `
-          <div class="autocomplete-item" data-index="${index}">
-            <div class="autocomplete-title">${title}</div>
-            <div class="autocomplete-subtitle">${subtitle}</div>
-          </div>
-        `;
-      }).join('');
-
-      autocompleteList.style.display = 'block';
-
-      autocompleteList.querySelectorAll('.autocomplete-item').forEach(el => {
-        el.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          const idx = Number(el.dataset.index);
-          selectSuggestion(idx);
-        });
-      });
-    }
-
-    function updateActiveSuggestion() {
-      const items = autocompleteList.querySelectorAll('.autocomplete-item');
-      items.forEach((item, idx) => {
-        item.classList.toggle('active', idx === selectedSuggestionIndex);
-      });
-    }
-
-    function searchCatalog(query) {
-      const q = normalizeText(query);
-      if (!q) return [];
-
-      const starts = [];
-      const contains = [];
-
+    function searchCatalog(q) {
+      const n = normalizeText(q);
+      if (!n) return [];
+      const starts = [], contains = [];
       for (const item of rotulosCatalog) {
-        if (!item._search_blob.includes(q)) continue;
-
-        const label = normalizeText(getItemDisplayLabel(item));
-        if (label.startsWith(q)) {
-          starts.push(item);
-        } else {
-          contains.push(item);
-        }
+        if (!item._blob.includes(n)) continue;
+        (normalizeText(getLabel(item)).startsWith(n) ? starts : contains).push(item);
       }
-
       return [...starts, ...contains].slice(0, 12);
     }
 
-    function findCatalogItemById(id) {
-      const numericId = Number(id);
-      if (!Number.isFinite(numericId)) return null;
-      return rotulosCatalog.find(item => Number(item.terraza_id) === numericId) || null;
+    function renderAC(items) {
+      currentSuggestions = items;
+      selectedSuggIdx = -1;
+
+      if (!items.length) { closeAC(); return; }
+
+      acList.innerHTML = items.map((item, i) => `
+        <div class="ac-item" role="option" data-idx="${i}">
+          <div class="ac-pin">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+            </svg>
+          </div>
+          <div class="ac-text">
+            <div class="ac-title">${escapeHtml(getLabel(item))}</div>
+            <div class="ac-sub">${escapeHtml(item.direccion_resumen || item.nombre_via || '')}</div>
+          </div>
+        </div>
+      `).join('');
+
+      acList.classList.add('open');
+
+      acList.querySelectorAll('.ac-item').forEach(el => {
+        el.addEventListener('mousedown', e => { e.preventDefault(); selectSuggestion(+el.dataset.idx); });
+        el.addEventListener('touchend',  e => { e.preventDefault(); selectSuggestion(+el.dataset.idx); });
+      });
     }
 
-    function updateSearchInputFromId(id) {
-      const item = findCatalogItemById(id);
+    function closeAC() { acList.innerHTML = ''; acList.classList.remove('open'); currentSuggestions = []; selectedSuggIdx = -1; }
+
+    function highlightAC() {
+      acList.querySelectorAll('.ac-item').forEach((el,i) => el.classList.toggle('active', i === selectedSuggIdx));
+      const active = acList.querySelector('.ac-item.active');
+      if (active) active.scrollIntoView({ block: 'nearest' });
+    }
+
+    function selectSuggestion(idx) {
+      const item = currentSuggestions[idx];
       if (!item) return;
-      rotuloSearchInput.value = getItemDisplayLabel(item);
+      selectedTerraceId = item.terraza_id;
+      selectedRotulo    = getLabel(item);
+      searchInput.value = selectedRotulo;
+      searchClear.classList.add('visible');
+      closeAC();
+      placeName.textContent = selectedRotulo;
+      placeName.classList.remove('empty');
+      setSheetState('mid');
+      scheduleLoad();
     }
 
-    function selectSuggestion(index) {
-      const item = currentSuggestions[index];
-      if (!item) return;
+    /* ─── SEARCH EVENTS ──────────────────────────── */
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim();
+      searchClear.classList.toggle('visible', q.length > 0);
+      renderAC(searchCatalog(q));
+    });
 
-      terraceIdInput.value = item.terraza_id;
-      rotuloSearchInput.value = getItemDisplayLabel(item);
-      hideAutocomplete();
-      scheduleAutoLoad();
+    searchInput.addEventListener('focus', () => {
+      const q = searchInput.value.trim();
+      if (q) renderAC(searchCatalog(q));
+    });
+
+    searchInput.addEventListener('keydown', e => {
+      if (!acList.classList.contains('open')) {
+        if (e.key === 'Enter') {
+          const s = searchCatalog(searchInput.value.trim());
+          if (s.length === 1) { e.preventDefault(); selectSuggestion(0); }
+        }
+        return;
+      }
+      if (e.key === 'ArrowDown') { e.preventDefault(); selectedSuggIdx = Math.min(selectedSuggIdx+1, currentSuggestions.length-1); highlightAC(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); selectedSuggIdx = Math.max(selectedSuggIdx-1, 0); highlightAC(); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (selectedSuggIdx >= 0) selectSuggestion(selectedSuggIdx); else if (currentSuggestions.length===1) selectSuggestion(0); }
+      else if (e.key === 'Escape') closeAC();
+    });
+
+    searchInput.addEventListener('blur', () => setTimeout(closeAC, 180));
+
+    searchClear.addEventListener('click', () => {
+      searchInput.value = '';
+      searchClear.classList.remove('visible');
+      closeAC();
+      searchInput.focus();
+    });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#search-wrap')) closeAC();
+    });
+
+    /* ─── CONTROL EVENTS ─────────────────────────── */
+    dateInput.addEventListener('change', scheduleLoad);
+    dateInput.addEventListener('keydown', e => { if (e.key === 'Enter') loadSelection(); });
+
+    hourSlider.addEventListener('input', () => {
+      updateHour(+hourSlider.value);
+      scheduleLoad();
+    });
+
+    function scheduleLoad() {
+      clearTimeout(autoLoadTimeout);
+      autoLoadTimeout = setTimeout(loadSelection, 130);
     }
 
+    /* ─── PROJ HELPERS ───────────────────────────── */
+    function transformCoords(coords) {
+      if (!Array.isArray(coords)) return coords;
+      if (coords.length >= 2 && !Array.isArray(coords[0])) {
+        const [lon, lat] = proj4(SOURCE_EPSG, TARGET_EPSG, [+coords[0], +coords[1]]);
+        return [lon, lat];
+      }
+      return coords.map(transformCoords);
+    }
+
+    function reprojectGeometry(geom) {
+      if (!geom?.type) return null;
+      if (geom.type === 'GeometryCollection') return { ...geom, geometries: (geom.geometries||[]).map(reprojectGeometry).filter(Boolean) };
+      if (!geom.coordinates) return null;
+      return { ...geom, coordinates: transformCoords(geom.coordinates) };
+    }
+
+    function toUint8(v) {
+      if (!v) return null;
+      if (v instanceof Uint8Array) return v;
+      if (v instanceof ArrayBuffer) return new Uint8Array(v);
+      if (Array.isArray(v)) return new Uint8Array(v);
+      if (ArrayBuffer.isView(v)) return new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
+      if (typeof v === 'object') { const vals = Object.values(v); if (vals.every(x => Number.isFinite(+x))) return new Uint8Array(vals.map(Number)); }
+      return null;
+    }
+
+    function isGeoJSON(v) { return v && typeof v === 'object' && typeof v.type === 'string' && (Array.isArray(v.coordinates)||Array.isArray(v.geometries)); }
+
+    function decodeWkb(v) {
+      if (!v) throw new Error('empty geom');
+      if (typeof v === 'string') return wkx.Geometry.parse(v).toGeoJSON();
+      const bytes = toUint8(v);
+      if (!bytes) throw new Error('cannot convert geom');
+      return wkx.Geometry.parse(Buffer.from(bytes)).toGeoJSON();
+    }
+
+    /* ─── DATE HELPERS ───────────────────────────── */
+    function isoWeekInfo(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dow = tmp.getUTCDay() || 7;
+      tmp.setUTCDate(tmp.getUTCDate() + 4 - dow);
+      const isoYear = tmp.getUTCFullYear();
+      const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+      const isoWeek = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
+      return { isoYear, isoWeek };
+    }
+
+    function isoWeekDate(isoYear, isoWeek, dow) {
+      const s = new Date(Date.UTC(isoYear, 0, 4 + (isoWeek-1)*7));
+      const d = s.getUTCDay() || 7;
+      s.setUTCDate(s.getUTCDate() - d + dow);
+      return `${s.getUTCFullYear()}-${String(s.getUTCMonth()+1).padStart(2,'0')}-${String(s.getUTCDate()).padStart(2,'0')}`;
+    }
+
+    function representativeWednesday(selectedDate) {
+      const { isoWeek } = isoWeekInfo(selectedDate);
+      return isoWeekDate(FILE_YEAR_IN_BUCKET, isoWeek, 3);
+    }
+
+    function weekAlias(dateStr) {
+      const { isoWeek } = isoWeekInfo(dateStr);
+      return `${FILE_BASENAME}_${FILE_YEAR_IN_BUCKET}_W${String(isoWeek).padStart(2,'0')}${FILE_SUFFIX}`;
+    }
+
+    function weekUrl(dateStr) {
+      return `${BUCKET_BASE_URL}/${weekAlias(dateStr)}`;
+    }
+
+    function toYMD(v) {
+      if (!v) return null;
+      if (typeof v === 'string') { const m = v.match(/^(\d{4}-\d{2}-\d{2})/); if (m) return m[1]; }
+      const d = new Date(v);
+      if (isNaN(d)) return null;
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function hourFromDatetime(v) {
+      if (!v) return null;
+      if (typeof v === 'string') { const m = v.match(/T(\d{2}):|  (\d{2}):/); if (m) return +(m[1]||m[2]); }
+      const d = new Date(v); return isNaN(d) ? null : d.getHours();
+    }
+
+    /* ─── DUCKDB ─────────────────────────────────── */
     async function initDuckDB() {
       try {
-        const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-        const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
-
-        if (!bundle) {
-          throw new Error('No se pudo seleccionar un bundle de DuckDB-Wasm');
-        }
-
-        const workerUrl = URL.createObjectURL(
-          new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
-        );
-
+        showStatus('Cargando motor de datos…', false, true);
+        const bundles = duckdb.getJsDelivrBundles();
+        const bundle  = await duckdb.selectBundle(bundles);
+        const workerUrl = URL.createObjectURL(new Blob([`importScripts("${bundle.mainWorker}");`], { type:'text/javascript' }));
         const worker = new Worker(workerUrl);
-        const logger = new duckdb.ConsoleLogger();
-
-        db = new duckdb.AsyncDuckDB(logger, worker);
+        db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
         await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-
         URL.revokeObjectURL(workerUrl);
-
         conn = await db.connect();
-        await conn.query(`SET enable_progress_bar = false;`);
-        await conn.query(`SET threads = 1;`);
-
-        setStatus('Listo.');
+        await conn.query(`SET enable_progress_bar = false; SET threads = 1;`);
+        hideStatus();
       } catch (err) {
-        setStatus('Error inicializando DuckDB-Wasm.', true);
+        showStatus('Error inicializando el motor de datos', true);
         console.error(err);
       }
     }
 
-    async function ensureWeekRegistered(dateString) {
-      if (!db) throw new Error('DuckDB no está inicializado');
-
-      const alias = buildWeekAlias(dateString);
-      const url = buildWeekUrl(dateString);
-
-      if (registeredWeekAliases.has(alias)) {
-        return { alias, url };
+    async function ensureWeekFile(dateStr) {
+      const alias = weekAlias(dateStr);
+      if (!registeredWeekAliases.has(alias)) {
+        await db.registerFileURL(alias, weekUrl(dateStr), duckdb.DuckDBDataProtocol.HTTP, true);
+        registeredWeekAliases.add(alias);
       }
-
-      await db.registerFileURL(
-        alias,
-        url,
-        duckdb.DuckDBDataProtocol.HTTP,
-        true
-      );
-
-      registeredWeekAliases.add(alias);
-      return { alias, url };
+      return alias;
     }
 
-    function updateSummary(record, selectedDate) {
-      if (!record) {
-        resetSummary();
-        return;
-      }
-
-      const { isoYear, isoWeek } = getIsoWeekInfo(selectedDate);
-
-      metricShadowPct.textContent = formatPercent(record.shadow_pct);
-      metricShadowArea.textContent = formatArea(record.shadow_area_m2);
-      metricTerraceArea.textContent = formatArea(record.terrace_area_m2);
-      metricWeek.textContent = `${isoYear}-W${String(isoWeek).padStart(2, '0')}`;
-
-      summaryDetails.innerHTML = `
-        <div class="detail-item"><strong>Rótulo:</strong> ${escapeHtml(record.rotulo || '—')}</div>
-      `;
+    function normRow(row) {
+      if (!row) return row;
+      if (typeof row.toJSON === 'function') return row.toJSON();
+      const obj = {};
+      for (const k of Object.keys(row)) { const v = row[k]; obj[k] = (v && typeof v.toJSON === 'function') ? v.toJSON() : v; }
+      return obj;
     }
 
-    function renderSelectedHour() {
-      clearLayer();
+    async function arrowToRows(table) {
+      if (!table) return [];
+      return (table.toArray ? table.toArray() : []).map(normRow);
+    }
 
-      const features = currentDayFeatures;
-
-      if (!features.length) {
-        currentRecord = null;
-        updateSummary(null, dateInput.value);
-        return;
-      }
-
-      currentLayer = L.geoJSON(features, {
-        style: () => ({
-          color: '#0b57d0',
-          weight: 2,
-          fillColor: '#0b57d0',
-          fillOpacity: 0.28,
-        }),
-        onEachFeature: (feature, layer) => {
-          const p = feature.properties;
-          layer.bindPopup(`
-            <strong>Terraza ${escapeHtml(p.terraza_id)}</strong><br>
-            ${escapeHtml(p.rotulo || '(sin rótulo)')}<br>
-            Área sombra: ${escapeHtml(formatArea(p.shadow_area_m2))}<br>
-            % sombra: ${escapeHtml(formatPercent(p.shadow_pct))}<br>
-            Área terraza: ${escapeHtml(formatArea(p.terrace_area_m2))}
-          `);
-        }
-      }).addTo(map);
-
+    /* ─── CATALOG ────────────────────────────────── */
+    async function loadCatalog() {
       try {
-        const bounds = currentLayer.getBounds();
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, {
-            padding: [40, 40],
-            maxZoom: 17
-          });
-        }
+        const res = await fetch(ROTULOS_JSON_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error('fetch failed');
+        const data = await res.json();
+        rotulosCatalog = data
+          .map(item => ({
+            ...item,
+            terraza_id: +item.terraza_id,
+            _blob: normalizeText([item.label_busqueda, item.rotulo_formateado, item.rotulo_original, item.direccion_resumen, item.nombre_via, item.numero_via].filter(Boolean).join(' '))
+          }))
+          .filter(item => Number.isFinite(item.terraza_id));
       } catch (err) {
-        console.error(err);
+        console.warn('Could not load catalog', err);
       }
-
-      currentRecord = features[0].properties;
-      updateSummary(currentRecord, dateInput.value);
     }
 
-    function buildDailyQuery(alias, terraceId, selectedDate, selectedHour) {
-      const representativeDate = getRepresentativeWednesdayDateForSelectedWeek(selectedDate);
-
-      return `
-        SELECT
-          terraza_id,
-          rotulo,
-          datetime,
-          date,
-          shadow_area_m2,
-          shadow_pct,
-          terrace_area_m2,
-          building_id,
-          geometry
-        FROM read_parquet('${alias}')
-        WHERE terraza_id = ${Number(terraceId)}
-          AND substr(
-            coalesce(cast(date as varchar), cast(datetime as varchar)),
-            1,
-            10
-          ) = '${representativeDate}'
-          AND EXTRACT(HOUR FROM datetime) = ${Number(selectedHour)}
-        ORDER BY datetime
-      `;
-    }
-
+    /* ─── LOAD & RENDER ──────────────────────────── */
     async function loadSelection() {
-      if (!db || !conn) {
-        setStatus('DuckDB-Wasm aún no está cargado.', true);
-        return;
-      }
+      if (!db || !conn) return;
+      if (!selectedTerraceId) return;
 
       const selectedDate = dateInput.value;
-      const selectedHour = Number(hourSlider.value);
-      const terraceId = Number(terraceIdInput.value);
+      const selectedHour = +hourSlider.value;
 
-      if (!selectedDate) {
-        setStatus('Selecciona una fecha.', true);
-        return;
-      }
-
-      if (selectedDate < MIN_DATE || selectedDate > MAX_DATE) {
-        setStatus(`La fecha debe estar entre ${MIN_DATE} y ${MAX_DATE}.`, true);
-        return;
-      }
-
-      if (!Number.isInteger(terraceId) || terraceId <= 0) {
-        setStatus('Introduce un ID de terraza válido.', true);
+      if (!selectedDate || selectedDate < MIN_DATE || selectedDate > MAX_DATE) {
+        showStatus('Fecha fuera de rango', true);
         return;
       }
 
       try {
-        setStatus('Consultando...');
+        showStatus('Consultando datos…', false, true);
+        noResult.style.display = 'none';
 
-        const { alias } = await ensureWeekRegistered(selectedDate);
-        const sql = buildDailyQuery(alias, terraceId, selectedDate, selectedHour);
+        const alias = await ensureWeekFile(selectedDate);
+        const repDate = representativeWednesday(selectedDate);
+
+        const sql = `
+          SELECT terraza_id, rotulo, datetime, date,
+                 shadow_area_m2, shadow_pct, terrace_area_m2, building_id, geometry
+          FROM read_parquet('${alias}')
+          WHERE terraza_id = ${+selectedTerraceId}
+            AND substr(coalesce(cast(date as varchar), cast(datetime as varchar)),1,10) = '${repDate}'
+            AND EXTRACT(HOUR FROM datetime) = ${selectedHour}
+          ORDER BY datetime
+        `;
 
         const result = await conn.query(sql);
-        const rows = await arrowTableToRows(result);
+        const rows   = await arrowToRows(result);
 
-        currentDayFeatures = rows.map((row, i) => {
+        const features = rows.map((row, i) => {
           try {
-            return rowToFeature(row, i);
-          } catch (err) {
-            console.error(err);
-            return null;
-          }
+            const rawGeom = row.geometry;
+            if (!rawGeom) return null;
+            const sourceGeom = isGeoJSON(rawGeom) ? rawGeom : decodeWkb(rawGeom);
+            const geom4326   = reprojectGeometry(sourceGeom);
+            if (!geom4326) return null;
+            return {
+              type: 'Feature',
+              geometry: geom4326,
+              properties: {
+                terraza_id:    +row.terraza_id,
+                rotulo:        row.rotulo ?? '',
+                shadow_pct:    row.shadow_pct,
+                shadow_area_m2: row.shadow_area_m2,
+                terrace_area_m2: row.terrace_area_m2,
+                hour:          hourFromDatetime(row.datetime),
+              }
+            };
+          } catch { return null; }
         }).filter(Boolean);
 
-        if (!currentDayFeatures.length) {
-          clearLayer();
-          resetSummary();
-          setStatus('Sin datos para esa selección.');
+        currentDayFeatures = features;
+
+        if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
+
+        if (!features.length) {
+          updateRing(null);
+          noResult.style.display = 'block';
+          hideStatus();
           return;
         }
 
-        setStatus('');
-        renderSelectedHour();
+        currentLayer = L.geoJSON(features, {
+          style: () => ({
+            color: '#c0603a',
+            weight: 2,
+            fillColor: '#c0603a',
+            fillOpacity: 0.30,
+          }),
+          onEachFeature: (feature, layer) => {
+            const p = feature.properties;
+            const capped = Math.min(p.shadow_pct <= 1 ? p.shadow_pct * 100 : p.shadow_pct, 100);
+            layer.bindPopup(`<strong>${escapeHtml(p.rotulo || 'Terraza')}</strong><br>Sombra: ${capped.toFixed(1)} %`);
+          }
+        }).addTo(map);
+
+        try {
+          const bounds = currentLayer.getBounds();
+          if (bounds.isValid()) map.fitBounds(bounds, { padding:[40,40], maxZoom:18 });
+        } catch {}
+
+        const raw = features[0].properties.shadow_pct;
+        const pct = raw !== null && raw !== undefined ? (raw <= 1 ? raw * 100 : raw) : null;
+        updateRing(pct);
+        hideStatus();
+
       } catch (err) {
-        clearLayer();
-        currentDayFeatures = [];
-        resetSummary();
-        setStatus('Error consultando los datos.', true);
+        showStatus('Error al consultar los datos', true);
         console.error(err);
       }
     }
 
-    function scheduleAutoLoad() {
-      clearTimeout(autoLoadTimeout);
-      autoLoadTimeout = setTimeout(() => {
-        loadSelection();
-      }, 120);
+    /* ─── DESKTOP LABEL ──────────────────────────── */
+    function checkDesktop() {
+      if (window.innerWidth >= 720) desktopLabel.style.display = 'block';
+      else desktopLabel.style.display = 'none';
     }
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
 
-    rotuloSearchInput.addEventListener('input', () => {
-      const query = rotuloSearchInput.value.trim();
-
-      const suggestions = searchCatalog(query);
-      renderAutocomplete(suggestions);
-
-      if (!query) return;
-    });
-
-    rotuloSearchInput.addEventListener('focus', () => {
-      const query = rotuloSearchInput.value.trim();
-      if (!query) return;
-      renderAutocomplete(searchCatalog(query));
-    });
-
-    rotuloSearchInput.addEventListener('keydown', (e) => {
-      if (autocompleteList.style.display !== 'block') {
-        if (e.key === 'Enter') {
-          const query = rotuloSearchInput.value.trim();
-          const suggestions = searchCatalog(query);
-          if (suggestions.length === 1) {
-            e.preventDefault();
-            terraceIdInput.value = suggestions[0].terraza_id;
-            rotuloSearchInput.value = getItemDisplayLabel(suggestions[0]);
-            hideAutocomplete();
-            loadSelection();
-          }
-        }
-        return;
-      }
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, currentSuggestions.length - 1);
-        updateActiveSuggestion();
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
-        updateActiveSuggestion();
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (selectedSuggestionIndex >= 0) {
-          selectSuggestion(selectedSuggestionIndex);
-        } else if (currentSuggestions.length === 1) {
-          selectSuggestion(0);
-        }
-      } else if (e.key === 'Escape') {
-        hideAutocomplete();
-      }
-    });
-
-    rotuloSearchInput.addEventListener('blur', () => {
-      setTimeout(() => hideAutocomplete(), 150);
-    });
-
-    terraceIdInput.addEventListener('change', () => {
-      updateSearchInputFromId(terraceIdInput.value);
-      scheduleAutoLoad();
-    });
-
-    terraceIdInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        updateSearchInputFromId(terraceIdInput.value);
-        loadSelection();
-      }
-    });
-
-    dateInput.addEventListener('change', () => {
-      scheduleAutoLoad();
-    });
-
-    dateInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        loadSelection();
-      }
-    });
-
-    hourSlider.addEventListener('input', () => {
-      const hour = clampHour(hourSlider.value);
-      hourSlider.value = hour;
-      updateHourLabel(hour);
-      scheduleAutoLoad();
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!autocompleteList.contains(e.target) && e.target !== rotuloSearchInput) {
-        hideAutocomplete();
-      }
-    });
-
-    updateHourLabel(Number(hourSlider.value));
-    resetSummary();
-
-    await loadRotulosCatalog();
+    /* ─── INIT ───────────────────────────────────── */
+    updateHour(+hourSlider.value);
+    updateRing(null);
+    setSheetState('peek', false);
+    await loadCatalog();
     await initDuckDB();
-
-    updateSearchInputFromId(terraceIdInput.value);
-    await loadSelection();
   </script>
 </body>
 </html>
