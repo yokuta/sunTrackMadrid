@@ -727,6 +727,17 @@
 		  line-height: 1.4;
 		}
 
+		.terrace-info-item .info-pill-label {
+		  margin-bottom: 4px;
+		}
+
+		.terrace-info-item .info-pill-value {
+		  font-size: 14px;
+		  font-weight: 600;
+		  color: var(--brand-dark);
+		  word-break: break-word;
+		}
+
 		.terrace-info-item strong {
 		  color: var(--brand-dark);
 		}
@@ -1156,20 +1167,33 @@
 			<div class="info-pill-value">${escapeHtml(toIntOrDash(p.sombrillas_es))}</div>
 		  </div>
 		  <div class="info-pill">
-			<div class="info-pill-label">Toldos</div>
-			<div class="info-pill-value">${escapeHtml(toIntOrDash(toldos))}</div>
+			<div class="info-pill-label">Estufas</div>
+			<div class="info-pill-value">${escapeHtml(toIntOrDash(totalEstufas))}</div>
 		  </div>
 		</div>
 
 		<div class="terrace-info-list">
-		  <div class="terrace-info-item"><strong>Horario:</strong> ${escapeHtml(buildHorarioText(p))}</div>
-		  <div class="terrace-info-item"><strong>Estufas:</strong> ${escapeHtml(String(totalEstufas))}</div>
-		  <div class="terrace-info-item"><strong>Superficie:</strong> ${escapeHtml(
-			Number.isFinite(Number(p.Superficie_ES)) ? `${Number(p.Superficie_ES).toFixed(2)} m²` : '—'
-		  )}</div>
-		  <div class="terrace-info-item"><strong>Periodo:</strong> ${escapeHtml(safeText(p.desc_periodo_terraza))}</div>
-		  <div class="terrace-info-item"><strong>Ubicación:</strong> ${escapeHtml(safeText(p.desc_ubicacion_terraza))}</div>
-		  <div class="terrace-info-item"><strong>Suelo:</strong> ${escapeHtml(safeText(p.tipo_suelo_desc))}</div>
+		  <div class="terrace-info-item">
+			<div class="info-pill-label">Horario L-J</div>
+			<div class="info-pill-value">
+			  ${escapeHtml(
+				p.hora_ini_LJ_es && p.hora_fin_LJ_es
+				  ? `${p.hora_ini_LJ_es} – ${p.hora_fin_LJ_es}`
+				  : '—'
+			  )}
+			</div>
+		  </div>
+
+		  <div class="terrace-info-item">
+			<div class="info-pill-label">Horario V-S</div>
+			<div class="info-pill-value">
+			  ${escapeHtml(
+				p.hora_ini_VS_es && p.hora_fin_VS_es
+				  ? `${p.hora_ini_VS_es} – ${p.hora_fin_VS_es}`
+				  : '—'
+			  )}
+			</div>
+		  </div>
 		</div>
 	  `;
 
