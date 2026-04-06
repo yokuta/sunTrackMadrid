@@ -237,22 +237,25 @@
 	  }
 
 	  #sheet {
-		position: fixed;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		z-index: 300;
-		background: rgba(255,255,255,0.97);
-		border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-		box-shadow: 0 -8px 40px rgba(15,36,61,0.12);
-		transition: height 0.42s var(--transition);
-		max-width: 100vw;
-		touch-action: none;
-		overflow: hidden;
-		height: var(--sheet-peek);
-		border-top: 1px solid rgba(255,255,255,0.8);
-		backdrop-filter: blur(14px);
-	  }
+	  position: fixed;
+	  left: 0;
+	  right: 0;
+	  bottom: 0;
+	  z-index: 300;
+	  background: rgba(255,255,255,0.97);
+	  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+	  box-shadow: 0 -8px 40px rgba(15,36,61,0.12);
+	  transition: height 0.42s var(--transition);
+	  max-width: 100vw;
+	  touch-action: pan-y;
+	  overflow: hidden;
+	  height: var(--sheet-peek);
+	  border-top: 1px solid rgba(255,255,255,0.8);
+	  backdrop-filter: blur(14px);
+
+	  display: flex;
+	  flex-direction: column;
+	}
 
 	  #sheet[data-state="peek"]  { height: var(--sheet-peek); }
 	  #sheet[data-state="mid"]   { height: var(--sheet-mid); }
@@ -281,6 +284,11 @@
 		  overflow-y: auto;
 		  overscroll-behavior: contain;
 		  position: relative;
+
+		  flex: 1;
+		  min-height: 0;
+		  -webkit-overflow-scrolling: touch;
+		  touch-action: pan-y;
 		}
 
 
