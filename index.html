@@ -761,9 +761,9 @@
 		}
 	  
 	    
-		#ranking-link {
+		#ranking-link,
+		#info-link {
 		  position: absolute;
-		  top: calc(100% + 10px);
 		  right: 4px;
 		  width: 42px;
 		  height: 42px;
@@ -775,18 +775,142 @@
 		  align-items: center;
 		  justify-content: center;
 		  text-decoration: none;
-		  font-size: 20px;
 		  z-index: 410;
 		  backdrop-filter: blur(10px);
 		}
 
-		#ranking-link:hover {
+		#ranking-link {
+		  top: 54px;
+		}
+
+		#info-link {
+		  top: 102px;
+		}
+
+		#ranking-link:hover,
+		#info-link:hover {
 		  transform: translateY(-1px);
+		}
+
+		@media (min-width: 720px) {
+		  #info-link {
+			display: none;
+		  }
 		}
 			  
 	  
 
-	  
+		#mobile-filters-bar {
+		  display: none;
+		}
+
+		@media (max-width: 719px) {
+		  #mobile-filters-bar {
+			display: flex;
+			align-items: center;
+			justify-content: flex-start;
+			margin-top: 10px;
+			padding-right: 110px;
+			pointer-events: all;
+		  }
+		  .filter-chip {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			height: 42px;
+			padding: 0 14px;
+			border-radius: 999px;
+			border: 1px solid var(--border-2);
+			background: rgba(255,255,255,0.96);
+			color: var(--brand-dark);
+			font-family: var(--font-body);
+			font-size: 13px;
+			font-weight: 600;
+			box-shadow: var(--shadow-md);
+			backdrop-filter: blur(10px);
+			cursor: pointer;
+			transition: transform 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
+		  }
+
+		  .filter-chip:active {
+			transform: scale(0.98);
+		  }
+
+		  .filter-chip.is-active {
+			background: linear-gradient(135deg, #e7f5ea, #f7fbf8);
+			border-color: rgba(34, 197, 94, 0.28);
+			color: #166534;
+		  }
+		}
+		
+		
+		#shadow-legend {
+		  position: fixed;
+		  left: 12px;
+		  bottom: calc(var(--sheet-peek) + 16px);
+		  z-index: 345;
+		  min-width: 170px;
+		  background: rgba(255,255,255,0.95);
+		  border: 1px solid var(--border-2);
+		  border-radius: 16px;
+		  padding: 10px 12px;
+		  box-shadow: var(--shadow-md);
+		  backdrop-filter: blur(10px);
+		  transition: opacity 0.2s, transform 0.2s;
+		}
+
+		#shadow-legend.hidden {
+		  opacity: 0;
+		  transform: translateY(6px);
+		  pointer-events: none;
+		}
+
+		.legend-title {
+		  font-size: 10px;
+		  font-weight: 700;
+		  text-transform: uppercase;
+		  letter-spacing: 0.06em;
+		  color: var(--muted);
+		  margin-bottom: 6px;
+		}
+
+		.legend-scale {
+		  display: grid;
+		  grid-template-columns: repeat(4, 1fr);
+		  gap: 6px;
+		  margin-bottom: 6px;
+		}
+
+		.lg-stop {
+		  height: 12px;
+		  border-radius: 999px;
+		  border: 1px solid rgba(255,255,255,0.75);
+		}
+
+		.lg-stop.shade { background: #2f6fb3; }
+		.lg-stop.soft  { background: #6fa8dc; }
+		.lg-stop.warm  { background: #f4b942; }
+		.lg-stop.sun   { background: #d8572a; }
+
+		.legend-labels {
+		  display: flex;
+		  justify-content: space-between;
+		  gap: 10px;
+		  font-size: 10px;
+		  color: var(--muted);
+		}
+
+		@media (min-width: 720px) {
+		  #shadow-legend {
+			display: none;
+		  }
+		}
+
+		@media (min-width: 720px) {
+		  #shadow-legend {
+			display: none;
+		  }
+		}
 	  
 	</style>
 </head>
@@ -804,11 +928,40 @@
         <button id="search-clear" aria-label="Borrar búsqueda">×</button>
       </div>
       <div id="autocompleteList" role="listbox"></div>
+	  <div id="mobile-filters-bar">
+		  <button
+			id="green-filter-toggle"
+			type="button"
+			class="filter-chip"
+			aria-pressed="false"
+			aria-label="Filtrar terrazas con zonas verdes cercanas"
+			title="Mostrar solo terrazas con zona verde cercana"
+		  >
+			<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+			  <path
+				d="M12 21c0-4.2 1.2-7.2 3.4-9.4 2.3-2.3 5.1-3.3 6.1-3.6.2 1-.1 3.8-2.4 6.1-2 2-4.5 3-7.1 3.2M12 21c0-3.6-.9-6.1-2.7-7.9C7.1 10.9 4.4 10 3.3 9.7c-.2 1 .1 3.6 2.2 5.7 1.8 1.8 4 2.8 6.5 3"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.8"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			  />
+			</svg>
+			<span>Zonas verdes</span>
+		  </button>
+		</div>
 	  <a id="ranking-link" href="./ranking.html" aria-label="Ir al ranking de terrazas">
 		  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
 			<rect x="3" y="11" width="4" height="8" rx="1.5" fill="#22c55e"></rect>
 			<rect x="10" y="7" width="4" height="12" rx="1.5" fill="#8b5cf6"></rect>
 			<rect x="17" y="4" width="4" height="15" rx="1.5" fill="#06b6d4"></rect>
+		  </svg>
+		</a>
+		<a id="info-link" href="./Infoterrazas.html" aria-label="Ir a información adicional">
+		  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+			<circle cx="12" cy="12" r="9" fill="none" stroke="#0f3d68" stroke-width="2"></circle>
+			<line x1="12" y1="10" x2="12" y2="16" stroke="#0f3d68" stroke-width="2" stroke-linecap="round"></line>
+			<circle cx="12" cy="7" r="1.2" fill="#0f3d68"></circle>
 		  </svg>
 		</a>
     </div>
@@ -925,6 +1078,9 @@
 	let terracesGeojson = null;
 	let terracesLayer = null;
 	let selectedTerraceFeature = null;
+	
+	let greenFilterActive = false;
+	let shadowByTerraceId = new Map();
 
     const registeredWeekAliases = new Set();
 
@@ -949,10 +1105,12 @@
 	
 	const terraceInfoSection = document.getElementById('terrace-info-section');
 	const terraceInfoCard = document.getElementById('terrace-info-card');
-
+	const greenFilterToggle = document.getElementById('green-filter-toggle');
+	const shadowLegend = document.getElementById('shadow-legend');
+	
     const map = L.map('map', {
-      center: [40.4168, -3.7038],
-      zoom: 11,
+	  center: [40.4168, -3.7038],
+	  zoom: isMobileLayout() ? 12 : 11,
       minZoom: MAP_MIN_ZOOM,
       maxZoom: MAP_MAX_ZOOM,
       maxBounds: MADRID_BOUNDS.pad(0.15),
@@ -968,7 +1126,10 @@
       attribution: '© OpenStreetMap © CARTO'
     }).addTo(map);
 
-    map.fitBounds(MADRID_BOUNDS, { padding: [20, 20], maxZoom: 11 });
+    map.fitBounds(MADRID_BOUNDS, {
+	  padding: isMobileLayout() ? [16, 16] : [20, 20],
+	  maxZoom: isMobileLayout() ? 12 : 11
+	});
 
 	//L.control.zoom({ position: 'topright' }).addTo(map);
 
@@ -994,16 +1155,31 @@
     function isMobileLayout() {
       return window.innerWidth < 720;
     }
+	
+	
+	
+	function updateLegendVisibility() {
+	  if (!shadowLegend) return;
+
+	  const shouldShow = isMobileLayout() && sheetState === 'peek';
+
+	  shadowLegend.classList.toggle('hidden', !shouldShow);
+	}
 
     function setSheetState(state, animate = true) {
-      sheetState = state;
-      if (!animate) sheet.style.transition = 'none';
-      sheet.dataset.state = state;
-      if (!animate) setTimeout(() => { sheet.style.transition = ''; }, 50);
+	  sheetState = state;
+	  if (!animate) sheet.style.transition = 'none';
+	  sheet.dataset.state = state;
+	  if (!animate) setTimeout(() => { sheet.style.transition = ''; }, 50);
 
-      const h = state === 'peek' ? peekH() : state === 'mid' ? midH() : fullH();
-      statusPill.style.bottom = (h + 12) + 'px';
-    }
+	  const h = state === 'peek' ? peekH() : state === 'mid' ? midH() : fullH();
+	  statusPill.style.bottom = (h + 12) + 'px';
+
+	  updateLegendVisibility();
+	}
+	
+	
+	
 
     function onDragStart(clientY) {
       isDragging = true;
@@ -1108,8 +1284,50 @@
     }
 	
 	
+	function buildAllTerracesShadowQuery(alias, selectedDate, selectedHour) {
+	  const representativeDate = getRepresentativeWednesdayDateForSelectedWeek(selectedDate);
+
+	  return `
+		SELECT
+		  terraza_id,
+		  shadow_pct
+		FROM read_parquet('${alias}')
+		WHERE substr(
+		  coalesce(cast(date as varchar), cast(datetime as varchar)),
+		  1,
+		  10
+		) = '${representativeDate}'
+		  AND EXTRACT(HOUR FROM datetime) = ${Number(selectedHour)}
+	  `;
+	}
 	
 	
+	async function refreshTerraceShadowColors() {
+	  if (!db || !conn || !terracesGeojson) return;
+
+	  const selectedDate = dateInput.value;
+	  const selectedHour = Number(hourSlider.value);
+
+	  try {
+		const { alias } = await ensureWeekRegistered(selectedDate);
+		const sql = buildAllTerracesShadowQuery(alias, selectedDate, selectedHour);
+		const result = await conn.query(sql);
+		const rows = await arrowTableToRows(result);
+
+		shadowByTerraceId.clear();
+
+		for (const row of rows) {
+		  const tid = Number(row.terraza_id);
+		  if (Number.isFinite(tid)) {
+			shadowByTerraceId.set(tid, row.shadow_pct);
+		  }
+		}
+
+		renderTerracesLayer();
+	  } catch (err) {
+		console.error('Error actualizando colores de sombra:', err);
+	  }
+	}
 	
 	function toIntOrDash(v) {
 	  const n = Number(v);
@@ -1631,7 +1849,7 @@
 	  } else {
 		setSheetState('mid');
 	  }
-
+	  
 	  scheduleLoad();
 	}
 	
@@ -1645,6 +1863,43 @@
 		fillOpacity: 0.95
 	  });
 	}
+	
+	
+	
+	function getShadowPctForTerrace(terraceId) {
+	  const raw = shadowByTerraceId.get(Number(terraceId));
+	  if (raw === null || raw === undefined) return null;
+	  const n = Number(raw);
+	  if (!Number.isFinite(n)) return null;
+	  return n <= 1 ? n * 100 : n;
+	}
+
+	function getSunBucketFromShadowPct(pct) {
+	  if (pct === null) return 3; // sin dato = mucho sol
+	  if (pct >= 75) return 0;    // mucha sombra
+	  if (pct >= 50) return 1;
+	  if (pct >= 25) return 2;
+	  return 3;                   // poco sombra = mucho sol
+	}
+
+	function getMarkerFillColor(feature) {
+	  const terraceId = Number(feature?.properties?.id_terraza);
+
+	  if (!isMobileLayout()) {
+		const isSelected =
+		  selectedTerraceId !== null &&
+		  terraceId === Number(selectedTerraceId);
+		return isSelected ? '#0f3d68' : '#005ea8';
+	  }
+
+	  const pct = getShadowPctForTerrace(terraceId);
+	  const bucket = getSunBucketFromShadowPct(pct);
+
+	  if (bucket === 0) return '#2f6fb3'; // más sombra
+	  if (bucket === 1) return '#6fa8dc';
+	  if (bucket === 2) return '#f4b942';
+	  return '#2f6fb3'; // más sol
+	}
 
 	function renderTerracesLayer() {
 	  if (!terracesGeojson) return;
@@ -1654,36 +1909,42 @@
 		terracesLayer = null;
 	  }
 
-	  terracesLayer = L.geoJSON(terracesGeojson, {
-		pointToLayer: (feature, latlng) => {
-		  const isSelected =
-			selectedTerraceId !== null &&
-			Number(feature?.properties?.id_terraza) === Number(selectedTerraceId);
+	  const filteredFeatures = terracesGeojson.features.filter(feature => {
+		if (!isMobileLayout()) return true;
+		if (!greenFilterActive) return true;
+		return Number(feature?.properties?.tiene_zona_ajardinada) === 1;
+	  });
 
-		  return L.circleMarker(latlng, {
-			radius: isSelected ? 7 : 5,
-			color: '#ffffff',
-			weight: 2,
-			fillColor: isSelected ? '#0f3d68' : '#005ea8',
-			fillOpacity: 0.95
-		  });
+	  terracesLayer = L.geoJSON(
+		{
+		  ...terracesGeojson,
+		  features: filteredFeatures
 		},
-		onEachFeature: (feature, layer) => {
-		  const p = feature.properties || {};
-		  layer.bindPopup(`
-			<strong>${escapeHtml(safeText(p.rotulo))}</strong><br>
-			Mesas: ${escapeHtml(String(toIntOrDash(p.mesas_es)))} ·
-			Sillas: ${escapeHtml(String(toIntOrDash(p.sillas_es)))}<br>
-			Sombrillas: ${escapeHtml(String(toIntOrDash(p.sombrillas_es)))}
-		  `);
+		{
+		  pointToLayer: (feature, latlng) => {
+			const terraceId = Number(feature?.properties?.id_terraza);
+			const isSelected =
+			  selectedTerraceId !== null &&
+			  terraceId === Number(selectedTerraceId);
 
-		  layer.on('click', () => {
-			selectTerraceFeature(feature);
-		  });
+			return L.circleMarker(latlng, {
+			  radius: isSelected ? 7 : 5,
+			  color: '#ffffff',
+			  weight: 2,
+			  fillColor: getMarkerFillColor(feature),
+			  fillOpacity: isSelected ? 1 : 0.92
+			});
+		  },
+		  onEachFeature: (feature, layer) => {
+			layer.on('click', () => {
+			  selectTerraceFeature(feature);
+			});
+		  }
 		}
-	  }).addTo(map);
+	  ).addTo(map);
 	}
-
+	
+	
 	function findTerraceFeatureById(terraceId) {
 	  if (!terracesGeojson?.features?.length) return null;
 	  return terracesGeojson.features.find(
@@ -1725,7 +1986,7 @@
 	  } else {
 		setSheetState('mid');
 	  }
-
+	  
 	  scheduleLoad();
 	}
 
@@ -1825,57 +2086,57 @@
     }
 
     async function loadSelection() {
-      if (!db || !conn) {
-        showStatus('DuckDB-Wasm aún no está cargado', true);
-        return;
-      }
+	  if (!db || !conn) {
+		showStatus('DuckDB-Wasm aún no está cargado', true);
+		return;
+	  }
 
-      if (!selectedTerraceId) {
-        return;
-      }
+	  if (!selectedTerraceId) {
+		return;
+	  }
 
-      const selectedDate = dateInput.value;
-      const selectedHour = Number(hourSlider.value);
+	  const selectedDate = dateInput.value;
+	  const selectedHour = Number(hourSlider.value);
 
-      if (!selectedDate) {
-        showStatus('Selecciona una fecha', true);
-        return;
-      }
+	  if (!selectedDate) {
+		showStatus('Selecciona una fecha', true);
+		return;
+	  }
 
-      if (selectedDate < MIN_DATE || selectedDate > MAX_DATE) {
-        showStatus(`La fecha debe estar entre ${MIN_DATE} y ${MAX_DATE}`, true);
-        return;
-      }
+	  if (selectedDate < MIN_DATE || selectedDate > MAX_DATE) {
+		showStatus(`La fecha debe estar entre ${MIN_DATE} y ${MAX_DATE}`, true);
+		return;
+	  }
 
-      try {
-        showStatus('Consultando datos…', false, true);
-        noResult.style.display = 'none';
+	  try {
+		showStatus('Consultando datos…', false, true);
+		noResult.style.display = 'none';
 
-        const { alias } = await ensureWeekRegistered(selectedDate);
-        const sql = buildDailyQuery(alias, selectedTerraceId, selectedDate, selectedHour);
+		const { alias } = await ensureWeekRegistered(selectedDate);
+		const sql = buildDailyQuery(alias, selectedTerraceId, selectedDate, selectedHour);
 
-        const result = await conn.query(sql);
-        const rows = await arrowTableToRows(result);
+		const result = await conn.query(sql);
+		const rows = await arrowTableToRows(result);
 
-        currentDayFeatures = rows.map((row, i) => {
-          try {
-            return rowToFeature(row, i);
-          } catch (err) {
-            console.error(err);
-            return null;
-          }
-        }).filter(Boolean);
+		currentDayFeatures = rows.map((row, i) => {
+		  try {
+			return rowToFeature(row, i);
+		  } catch (err) {
+			console.error(err);
+			return null;
+		  }
+		}).filter(Boolean);
 
-        clearLayer();
+		clearLayer();
 
-        if (!currentDayFeatures.length) {
-          resetSummary();
-          noResult.style.display = 'block';
-          hideStatus();
-          return;
-        }
+		if (!currentDayFeatures.length) {
+		  resetSummary();
+		  noResult.style.display = 'block';
+		  hideStatus();
+		  return;
+		}
 
-        currentLayer = L.geoJSON(currentDayFeatures, {
+		currentLayer = L.geoJSON(currentDayFeatures, {
 		  style: () => ({
 			color: '#24374d',
 			weight: 2.4,
@@ -1884,54 +2145,53 @@
 			dashArray: '6 4',
 			lineJoin: 'round'
 		  }),
-          onEachFeature: (feature, layer) => {
-            const p = feature.properties;
-            layer.bindPopup(`
-			  <strong>${escapeHtml(p.rotulo || 'Terraza')}</strong><br>
-			  Zona de sombra: ${escapeHtml(formatPercent(p.shadow_pct))}
-			`);
-          }
-        }).addTo(map);
+		  onEachFeature: (feature, layer) => {
+			const p = feature.properties;
+		
+		  }
+		}).addTo(map);
 
-        try {
-          const bounds = currentLayer.getBounds();
-          if (bounds.isValid()) {
-            const fitPadding = getFitPadding();
-            map.fitBounds(bounds, {
-              ...fitPadding,
-              maxZoom: FIT_BOUNDS_MAX_ZOOM
-            });
-          }
-        } catch (err) {
-          console.error(err);
-        }
+		try {
+		  const bounds = currentLayer.getBounds();
+		  if (bounds.isValid()) {
+			const fitPadding = getFitPadding();
+			map.fitBounds(bounds, {
+			  ...fitPadding,
+			  maxZoom: FIT_BOUNDS_MAX_ZOOM
+			});
+		  }
+		} catch (err) {
+		  console.error(err);
+		}
 
-        const raw = currentDayFeatures[0].properties.shadow_pct;
-        const pct = raw !== null && raw !== undefined ? (raw <= 1 ? raw * 100 : raw) : null;
-        updateRing(pct);
+		const raw = currentDayFeatures[0].properties.shadow_pct;
+		const pct = raw !== null && raw !== undefined ? (raw <= 1 ? raw * 100 : raw) : null;
+		updateRing(pct);
 
-        hideStatus();
-      } catch (err) {
-        clearLayer();
-        currentDayFeatures = [];
-        resetSummary();
-        showStatus('Error consultando los datos', true);
-        console.error(err);
-      }
-    }
+		hideStatus();
+	  } catch (err) {
+		clearLayer();
+		currentDayFeatures = [];
+		resetSummary();
+		showStatus('Error consultando los datos', true);
+		console.error(err);
+	  }
+	}
 
     function scheduleLoad() {
-      clearTimeout(autoLoadTimeout);
-      autoLoadTimeout = setTimeout(() => {
-        loadSelection();
-      }, 120);
-    }
+	  clearTimeout(autoLoadTimeout);
+	  autoLoadTimeout = setTimeout(async () => {
+		await refreshTerraceShadowColors();
+		await loadSelection();
+	  }, 120);
+	}
 
     searchInput.addEventListener('input', () => {
-      const query = searchInput.value.trim();
-      searchClear.classList.toggle('visible', query.length > 0);
-      renderAC(searchCatalog(query));
-    });
+	  const query = searchInput.value.trim();
+	  searchClear.classList.toggle('visible', query.length > 0);
+	  renderAC(searchCatalog(query));
+	  
+	});
 
     searchInput.addEventListener('focus', () => {
       const query = searchInput.value.trim();
@@ -1978,11 +2238,21 @@
     });
 
     searchClear.addEventListener('click', () => {
-      searchInput.value = '';
-      searchClear.classList.remove('visible');
-      closeAC();
-      searchInput.focus();
-    });
+	  searchInput.value = '';
+	  searchClear.classList.remove('visible');
+	  closeAC();
+
+	  selectedTerraceId = null;
+	  selectedRotulo = null;
+	  selectedTerraceFeature = null;
+	  placeName.textContent = 'Selecciona una terraza';
+	  placeName.classList.add('empty');
+	  terraceInfoSection.classList.add('hidden');
+
+	  renderTerracesLayer();
+	  
+	  searchInput.focus();
+	});
 
     document.addEventListener('click', (e) => {
       if (!e.target.closest('#search-wrap')) {
@@ -2006,11 +2276,27 @@
       updateHour(hour);
       scheduleLoad();
     });
+	
+	
+	
+	greenFilterToggle?.addEventListener('click', () => {
+	  greenFilterActive = !greenFilterActive;
 
-    function checkDesktop() {
-      if (window.innerWidth >= 720) desktopLabel.style.display = 'block';
-      else desktopLabel.style.display = 'none';
-    }
+	  greenFilterToggle.classList.toggle('is-active', greenFilterActive);
+	  greenFilterToggle.setAttribute('aria-pressed', greenFilterActive ? 'true' : 'false');
+
+	  renderTerracesLayer();
+	});
+    
+	
+	
+	
+	function checkDesktop() {
+	  if (window.innerWidth >= 720) desktopLabel.style.display = 'block';
+	  else desktopLabel.style.display = 'none';
+
+	  updateLegendVisibility();
+	}
 
     function pad2(n) {
       return String(n).padStart(2, '0');
@@ -2044,6 +2330,23 @@
     await loadRotulosCatalog();
 	await loadTerracesGeojson();
 	await initDuckDB();
+	await refreshTerraceShadowColors();
+	renderTerracesLayer();
+	updateLegendVisibility();
   </script>
+  
+	<div id="shadow-legend" aria-hidden="true">
+	  <div class="legend-title">Exposición al sol</div>
+	  <div class="legend-scale">
+		<span class="lg-stop shade"></span>
+		<span class="lg-stop soft"></span>
+		<span class="lg-stop warm"></span>
+		<span class="lg-stop sun"></span>
+	  </div>
+	  <div class="legend-labels">
+		<span>Más sombra</span>
+		<span>Más sol ☀️</span>
+	  </div>
+	</div>
 </body>
 </html>
