@@ -11,908 +11,1081 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <style>
-	  :root {
-		/* Paleta más institucional, azul-gris */
-		--bg:         #eef2f6;
-		--bg-soft:    #f5f7fa;
-		--panel:      #ffffff;
-		--panel-2:    #f3f6fa;
-		--panel-3:    #eaf0f7;
+    :root {
+      --bg:         #eef2f6;
+      --bg-soft:    #f5f7fa;
+      --panel:      #ffffff;
+      --panel-2:    #f3f6fa;
+      --panel-3:    #eaf0f7;
 
-		--text:       #16202b;
-		--muted:      #66788a;
-		--muted-2:    #8a98a8;
+      --text:       #16202b;
+      --muted:      #66788a;
+      --muted-2:    #8a98a8;
 
-		--brand:      #005ea8;
-		--brand-2:    #0a74c9;
-		--brand-3:    #dbe9f6;
-		--brand-dark: #0f3d68;
+      --brand:      #005ea8;
+      --brand-2:    #0a74c9;
+      --brand-3:    #dbe9f6;
+      --brand-dark: #0f3d68;
 
-		--shadow-fill:#40566f;
-		--shadow-line:#24374d;
-		--shadow-soft:#7e93a8;
+      --shadow-fill:#40566f;
+      --shadow-line:#24374d;
+      --shadow-soft:#7e93a8;
 
-		--border:     rgba(22, 32, 43, 0.10);
-		--border-2:   rgba(0, 94, 168, 0.14);
+      --border:     rgba(22, 32, 43, 0.10);
+      --border-2:   rgba(0, 94, 168, 0.14);
 
-		--shadow-sm:  0 2px 8px rgba(15, 36, 61, 0.06);
-		--shadow-md:  0 10px 28px rgba(15, 36, 61, 0.10);
-		--shadow-lg:  0 24px 70px rgba(15, 36, 61, 0.16);
+      --shadow-sm:  0 2px 8px rgba(15, 36, 61, 0.06);
+      --shadow-md:  0 10px 28px rgba(15, 36, 61, 0.10);
+      --shadow-lg:  0 24px 70px rgba(15, 36, 61, 0.16);
 
-		--radius-sm:  12px;
-		--radius-md:  20px;
-		--radius-lg:  28px;
-		--radius-xl:  36px;
+      --radius-sm:  12px;
+      --radius-md:  20px;
+      --radius-lg:  28px;
+      --radius-xl:  36px;
 
-		--font-display: 'DM Serif Display', serif;
-		--font-body:    'DM Sans', sans-serif;
+      --font-display: 'DM Serif Display', serif;
+      --font-body: 'DM Sans', sans-serif;
 
-		--sheet-peek: 165px;
-		--sheet-mid:  52vh;
-		--sheet-full: 72vh;
+      --sheet-peek: 165px;
+      --sheet-mid: 52vh;
+      --sheet-full: 72vh;
 
-		--transition: cubic-bezier(0.32, 0.72, 0, 1);
-	  }
+      --transition: cubic-bezier(0.32, 0.72, 0, 1);
+    }
 
-	  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-	  html, body {
-		height: 100%;
-		overflow: hidden;
-		font-family: var(--font-body);
-		background: var(--bg);
-		color: var(--text);
-	  }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+    }
 
-	  #map {
-		position: fixed;
-		inset: 0;
-		z-index: 0;
-		background:
-		  radial-gradient(circle at top left, rgba(0,94,168,0.05), transparent 32%),
-		  linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
-	  }
+    #map {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(circle at top left, rgba(0,94,168,0.05), transparent 32%),
+        linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+    }
 
-	  .leaflet-control-attribution {
-		font-size: 10px !important;
-		background: rgba(255,255,255,0.82) !important;
-		color: var(--muted) !important;
-		border-radius: 8px 0 0 0;
-		backdrop-filter: blur(8px);
-	  }
+    .leaflet-control-attribution {
+      font-size: 10px !important;
+      background: rgba(255,255,255,0.82) !important;
+      color: var(--muted) !important;
+      border-radius: 8px 0 0 0;
+      backdrop-filter: blur(8px);
+    }
 
-	  .leaflet-control-zoom a {
-		background: rgba(255,255,255,0.94) !important;
-		color: var(--brand-dark) !important;
-		border: 1px solid var(--border) !important;
-		box-shadow: var(--shadow-sm);
-	  }
+    .leaflet-control-zoom a {
+      background: rgba(255,255,255,0.94) !important;
+      color: var(--brand-dark) !important;
+      border: 1px solid var(--border) !important;
+      box-shadow: var(--shadow-sm);
+    }
 
-	  #search-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		z-index: 400;
-		padding: 10px 10px 0;
-		pointer-events: none;
-	  }
+    #search-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 400;
+      padding: 10px 10px 0;
+      pointer-events: none;
+    }
 
-	  #search-wrap {
-		pointer-events: all;
-		position: relative;
-		max-width: 480px;
-		margin: 0 auto;
-	  }
+    #search-wrap {
+      pointer-events: all;
+      position: relative;
+      max-width: 480px;
+      margin: 0 auto;
+    }
 
-	  #search-bar {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		background: rgba(255,255,255,0.94);
-		border: 1px solid var(--border-2);
-		border-radius: var(--radius-lg);
-		padding: 0 14px;
-		box-shadow: var(--shadow-lg);
-		backdrop-filter: blur(12px);
-		transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
-	  }
+    #search-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.94);
+      border: 1px solid var(--border-2);
+      border-radius: var(--radius-lg);
+      padding: 0 14px;
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(12px);
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+    }
 
-	  #search-bar:focus-within {
-		border-color: var(--brand-2);
-		box-shadow: var(--shadow-lg), 0 0 0 4px rgba(10,116,201,0.10);
-		transform: translateY(-1px);
-	  }
+    #search-bar:focus-within {
+      border-color: var(--brand-2);
+      box-shadow: var(--shadow-lg), 0 0 0 4px rgba(10,116,201,0.10);
+      transform: translateY(-1px);
+    }
 
-	  .search-icon {
-		flex-shrink: 0;
-		color: var(--brand);
-		opacity: 0.85;
-	  }
+    .search-icon {
+      flex-shrink: 0;
+      color: var(--brand);
+      opacity: 0.85;
+    }
 
-	  #rotuloSearchInput {
-		flex: 1;
-		border: none;
-		background: transparent;
-		font-family: var(--font-body);
-		font-size: 14px;
-		font-weight: 500;
-		color: var(--text);
-		padding: 12px 0;
-		outline: none;
-	  }
+    #rotuloSearchInput {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      padding: 12px 0;
+      outline: none;
+    }
 
-	  #rotuloSearchInput::placeholder {
-		color: var(--muted);
-		opacity: 0.8;
-	  }
+    #rotuloSearchInput::placeholder {
+      color: var(--muted);
+      opacity: 0.8;
+    }
 
-	  #search-clear {
-		flex-shrink: 0;
-		width: 26px;
-		height: 26px;
-		border-radius: 50%;
-		border: none;
-		background: var(--panel-3);
-		color: var(--brand-dark);
-		cursor: pointer;
-		display: none;
-		align-items: center;
-		justify-content: center;
-		font-size: 16px;
-		line-height: 1;
-		opacity: 0.9;
-		transition: opacity 0.15s, background 0.15s, transform 0.15s;
-	  }
+    #search-clear {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: none;
+      background: var(--panel-3);
+      color: var(--brand-dark);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      line-height: 1;
+      opacity: 0.9;
+      transition: opacity 0.15s, background 0.15s, transform 0.15s;
+    }
 
-	  #search-clear:hover {
-		opacity: 1;
-		background: #d6e7f7;
-		transform: scale(1.03);
-	  }
+    #search-clear:hover {
+      opacity: 1;
+      background: #d6e7f7;
+      transform: scale(1.03);
+    }
 
-	  #search-clear.visible { display: flex; }
+    #search-clear.visible {
+      display: flex;
+    }
 
-	  #autocompleteList {
-		position: absolute;
-		top: calc(100% + 6px);
-		left: 0;
-		right: 0;
-		background: rgba(255,255,255,0.96);
-		border: 1px solid var(--border-2);
-		border-radius: var(--radius-md);
-		box-shadow: var(--shadow-lg);
-		max-height: 40vh;
-		overflow-y: auto;
-		display: none;
-		overscroll-behavior: contain;
-		backdrop-filter: blur(10px);
-	  }
+    #autocompleteList {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: rgba(255,255,255,0.96);
+      border: 1px solid var(--border-2);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      max-height: 40vh;
+      overflow-y: auto;
+      display: none;
+      overscroll-behavior: contain;
+      backdrop-filter: blur(10px);
+    }
 
-	  #autocompleteList.open { display: block; }
+    #autocompleteList.open {
+      display: block;
+    }
 
-	  .ac-item {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding: 11px 14px;
-		cursor: pointer;
-		border-bottom: 1px solid rgba(22,32,43,0.06);
-		transition: background 0.12s;
-	  }
+    .ac-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(22,32,43,0.06);
+      transition: background 0.12s;
+    }
 
-	  .ac-item:last-child { border-bottom: none; }
+    .ac-item:last-child {
+      border-bottom: none;
+    }
 
-	  .ac-item:hover, .ac-item.active {
-		background: rgba(0,94,168,0.06);
-	  }
+    .ac-item:hover,
+    .ac-item.active {
+      background: rgba(0,94,168,0.06);
+    }
 
-	  .ac-pin {
-		flex-shrink: 0;
-		width: 32px;
-		height: 32px;
-		border-radius: 10px;
-		background: linear-gradient(135deg, var(--brand), var(--brand-2));
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: white;
-		box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
-	  }
+    .ac-pin {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+    }
 
-	  .ac-text { flex: 1; min-width: 0; }
-	  .ac-title {
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--text);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	  }
-	  .ac-sub {
-		font-size: 11px;
-		color: var(--muted);
-		opacity: 0.95;
-		margin-top: 1px;
-	  }
+    .ac-text {
+      flex: 1;
+      min-width: 0;
+    }
 
-	  #sheet {
-	  position: fixed;
-	  left: 0;
-	  right: 0;
-	  bottom: 0;
-	  z-index: 300;
-	  background: rgba(255,255,255,0.97);
-	  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-	  box-shadow: 0 -8px 40px rgba(15,36,61,0.12);
-	  transition: height 0.42s var(--transition);
-	  max-width: 100vw;
-	  touch-action: pan-y;
-	  overflow: hidden;
-	  height: var(--sheet-peek);
-	  border-top: 1px solid rgba(255,255,255,0.8);
-	  backdrop-filter: blur(14px);
+    .ac-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-	  display: flex;
-	  flex-direction: column;
-	}
+    .ac-sub {
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 0.95;
+      margin-top: 1px;
+    }
 
-	  #sheet[data-state="peek"]  { height: var(--sheet-peek); }
-	  #sheet[data-state="mid"]   { height: var(--sheet-mid); }
-	  #sheet[data-state="full"]  { height: var(--sheet-full); }
+    #sheet {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 300;
+      background: rgba(255,255,255,0.97);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      box-shadow: 0 -8px 40px rgba(15,36,61,0.12);
+      transition: height 0.42s var(--transition);
+      max-width: 100vw;
+      touch-action: pan-y;
+      overflow: hidden;
+      height: var(--sheet-peek);
+      border-top: 1px solid rgba(255,255,255,0.8);
+      backdrop-filter: blur(14px);
+      display: flex;
+      flex-direction: column;
+    }
 
-	  #sheet-handle-area {
-		padding: 10px 0 6px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		cursor: grab;
-		user-select: none;
-	  }
+    #sheet[data-state="peek"] { height: var(--sheet-peek); }
+    #sheet[data-state="mid"]  { height: var(--sheet-mid); }
+    #sheet[data-state="full"] { height: var(--sheet-full); }
 
-	  #sheet-handle-area:active { cursor: grabbing; }
+    #sheet-handle-area {
+      padding: 10px 0 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      user-select: none;
+    }
 
-	  .handle-pill {
-		width: 36px;
-		height: 4px;
-		border-radius: 2px;
-		background: rgba(102,120,138,0.35);
-	  }
+    #sheet-handle-area:active {
+      cursor: grabbing;
+    }
 
-		#sheet-content {
-		  padding: 46px 16px 16px;
-		  overflow-y: auto;
-		  overscroll-behavior: contain;
-		  position: relative;
+    .handle-pill {
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(102,120,138,0.35);
+    }
 
-		  flex: 1;
-		  min-height: 0;
-		  -webkit-overflow-scrolling: touch;
-		  touch-action: pan-y;
-		}
+    #sheet-content {
+      padding: 46px 16px 16px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+    }
 
+    #sheet-close {
+      position: absolute;
+      top: 4px;
+      right: 14px;
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 50%;
+      background: var(--panel-3);
+      color: var(--brand-dark);
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      box-shadow: var(--shadow-sm);
+    }
 
-		#sheet-close {
-		  position: absolute;
-		  top: 4px;
-		  right: 14px;
-		  width: 30px;
-		  height: 30px;
-		  border: none;
-		  border-radius: 50%;
-		  background: var(--panel-3);
-		  color: var(--brand-dark);
-		  font-size: 20px;
-		  line-height: 1;
-		  cursor: pointer;
+    #sheet-close:hover {
+      background: #d6e7f7;
+    }
+
+    #place-header {
+      display: none;
+    }
+
+    #place-name {
+      font-family: var(--font-display);
+      font-size: 20px;
+      line-height: 1.2;
+      color: var(--text);
+      flex: 1;
+    }
+
+    #place-name.empty {
+      color: var(--muted-2);
+      font-style: italic;
+    }
+
+    #shadow-ring-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background:
+        linear-gradient(135deg, rgba(219,233,246,0.7), rgba(243,246,250,0.92)),
+        radial-gradient(circle at top right, rgba(0,94,168,0.08), transparent 40%);
+      border: 1px solid var(--border-2);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .ring-svg-wrap {
+      flex-shrink: 0;
+      position: relative;
+      width: 64px;
+      height: 64px;
+    }
+
+    .ring-svg-wrap svg {
+      width: 64px;
+      height: 64px;
+      transform: rotate(-90deg);
+    }
+
+    #ring-track { stroke: rgba(0,94,168,0.14); }
+
+    #ring-fill {
+      stroke: var(--brand);
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.7s var(--transition);
+      filter: drop-shadow(0 2px 5px rgba(0,94,168,0.18));
+    }
+
+    .ring-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1.1;
+      color: var(--brand-dark);
+    }
+
+    .ring-label span {
+      font-size: 9px;
+      font-weight: 500;
+      color: var(--muted);
+      opacity: 1;
+    }
+
+    .shadow-info {
+      flex: 1;
+    }
+
+    .shadow-info .info-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--brand);
+      opacity: 0.95;
+      margin-bottom: 4px;
+    }
+
+    .shadow-info .info-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--brand-dark);
+      line-height: 1;
+    }
+
+    .shadow-info .info-note {
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 1;
+      margin-top: 4px;
+    }
+
+    .ctrl-section {
+      margin-bottom: 12px;
+    }
+
+    .ctrl-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      opacity: 1;
+      margin-bottom: 6px;
+    }
+
+    #dateInput {
+      width: 100%;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    #dateInput:focus {
+      border-color: var(--brand-2);
+      box-shadow: 0 0 0 3px rgba(10,116,201,0.10);
+    }
+
+    .hour-track-wrap {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px 8px;
+    }
+
+    .hour-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .hour-hint {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      opacity: 1;
+    }
+
+    .hour-badge {
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 18px;
+      white-space: nowrap;
+      box-shadow: 0 4px 10px rgba(0,94,168,0.18);
+    }
+
+    .hour-range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+      opacity: 1;
+      margin-top: 6px;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(0,94,168,0.18), rgba(0,94,168,0.10));
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3px solid var(--brand);
+      box-shadow: 0 2px 10px rgba(0,94,168,0.22);
+      cursor: grab;
+    }
+
+    input[type=range]::-webkit-slider-thumb:active {
+      cursor: grabbing;
+    }
+
+    input[type=range]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3px solid var(--brand);
+      box-shadow: 0 2px 10px rgba(0,94,168,0.22);
+      cursor: grab;
+    }
+
+    #status-pill {
+      position: fixed;
+      bottom: calc(var(--sheet-peek) + 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 350;
+      background: var(--brand-dark);
+      color: #ffffff;
+      font-size: 13px;
+      padding: 8px 18px;
+      border-radius: 20px;
+      white-space: nowrap;
+      box-shadow: var(--shadow-md);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s, bottom 0.42s var(--transition);
+    }
+
+    #status-pill.visible { opacity: 1; }
+    #status-pill.error { background: #a61d24; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #no-result {
+      display: none;
+      text-align: center;
+      padding: 18px 0 10px;
+      color: var(--muted);
+      opacity: 1;
+    }
+
+    #no-result svg { margin-bottom: 8px; }
+    #no-result p { font-size: 13px; }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .terrace-info-section {
+      margin-top: 6px;
+    }
+
+    .terrace-info-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .terrace-info-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--brand-dark);
+      line-height: 1.2;
+    }
+
+    .terrace-info-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .terrace-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .info-pill {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+
+    .info-pill-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+
+    .info-pill-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .terrace-info-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .terrace-info-item {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .terrace-info-item .info-pill-label {
+      margin-bottom: 4px;
+    }
+
+    .terrace-info-item .info-pill-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--brand-dark);
+      word-break: break-word;
+    }
+
+    .terrace-marker {
+      background: var(--brand);
+      border: 2px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0,94,168,0.28);
+    }
+
+    .terrace-marker.selected {
+      background: var(--brand-dark);
+      transform: scale(1.1);
+    }
+
+    /* ── Floating action buttons ── */
+    #ranking-link,
+    #locate-btn,
+    #info-link {
+      position: absolute;
+      right: 4px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.96);
+      border: 1px solid var(--border-2);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      z-index: 410;
+      backdrop-filter: blur(10px);
+      cursor: pointer;
+      transition: transform 0.18s, box-shadow 0.18s;
+    }
+
+    #ranking-link { top: 54px; }
+    #locate-btn   { top: 102px; }
+    #info-link    { top: 150px; }
+
+    #ranking-link:hover,
+    #locate-btn:hover,
+    #info-link:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    #locate-btn {
+      border: none;
+      padding: 0;
+    }
+
+    #locate-btn.locating {
+      animation: locatePulse 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes locatePulse {
+      from { box-shadow: var(--shadow-md); }
+      to   { box-shadow: 0 0 0 4px rgba(0,94,168,0.18), var(--shadow-md); }
+    }
+
+  
+
+    #shadow-legend {
+      position: fixed;
+      left: 12px;
+      bottom: calc(var(--sheet-peek) + 16px);
+      z-index: 345;
+      min-width: 170px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid var(--border-2);
+      border-radius: 16px;
+      padding: 10px 12px;
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(10px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    #shadow-legend.hidden {
+      opacity: 0;
+      transform: translateY(6px);
+      pointer-events: none;
+    }
+
+    .legend-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .legend-scale {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .lg-stop {
+      height: 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.75);
+    }
+
+    .lg-stop.shade { background: #2f6fb3; }
+    .lg-stop.soft  { background: #6fa8dc; }
+    .lg-stop.warm  { background: #f4b942; }
+    .lg-stop.sun   { background: #d8572a; }
+
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .sheet-top-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--brand);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(22,32,43,0.08);
+      margin: 12px 0;
+    }
+
+    #sheet-content::-webkit-scrollbar { width: 4px; }
+    #sheet-content::-webkit-scrollbar-track { background: transparent; }
+    #sheet-content::-webkit-scrollbar-thumb {
+      background: rgba(102,120,138,0.25);
+      border-radius: 2px;
+    }
+
+    /* ───────────────────────────────────────────
+       MOBILE-ONLY FILTER BAR
+    ─────────────────────────────────────────── */
+    @media (max-width: 719px) {
+      #desktop-label,
+      #place-divider {
+        display: none !important;
+      }
+
+      .terrace-info-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      #mobile-filters-bar {
 		  display: flex;
 		  align-items: center;
-		  justify-content: center;
-		  z-index: 10;
-		  box-shadow: var(--shadow-sm);
-		}
-
-		#sheet-close:hover {
-		  background: #d6e7f7;
-		}
-
-	  #place-header {
-		display: none;
-	  }
-
-	  #place-name {
-		font-family: var(--font-display);
-		font-size: 20px;
-		line-height: 1.2;
-		color: var(--text);
-		flex: 1;
-	  }
-
-	  #place-name.empty { color: var(--muted-2); font-style: italic; }
-
-	  #shadow-ring-wrap {
-		display: flex;
-		align-items: center;
-		gap: 14px;
-		background:
-		  linear-gradient(135deg, rgba(219,233,246,0.7), rgba(243,246,250,0.92)),
-		  radial-gradient(circle at top right, rgba(0,94,168,0.08), transparent 40%);
-		border: 1px solid var(--border-2);
-		border-radius: var(--radius-md);
-		padding: 14px 16px;
-		margin-bottom: 12px;
-		box-shadow: var(--shadow-sm);
-	  }
-
-	  .ring-svg-wrap {
-		flex-shrink: 0;
-		position: relative;
-		width: 64px;
-		height: 64px;
-	  }
-
-	  .ring-svg-wrap svg {
-		width: 64px;
-		height: 64px;
-		transform: rotate(-90deg);
-	  }
-
-	  #ring-track { stroke: rgba(0,94,168,0.14); }
-	  #ring-fill  {
-		stroke: var(--brand);
-		stroke-linecap: round;
-		transition: stroke-dashoffset 0.7s var(--transition);
-		filter: drop-shadow(0 2px 5px rgba(0,94,168,0.18));
-	  }
-
-	  .ring-label {
-		position: absolute;
-		inset: 0;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		font-weight: 700;
-		font-size: 14px;
-		line-height: 1.1;
-		color: var(--brand-dark);
-	  }
-
-	  .ring-label span {
-		font-size: 9px;
-		font-weight: 500;
-		color: var(--muted);
-		opacity: 1;
-	  }
-
-	  .shadow-info { flex: 1; }
-	  .shadow-info .info-label {
-		font-size: 10px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		color: var(--brand);
-		opacity: 0.95;
-		margin-bottom: 4px;
-	  }
-	  .shadow-info .info-value {
-		font-size: 22px;
-		font-weight: 700;
-		color: var(--brand-dark);
-		line-height: 1;
-	  }
-	  .shadow-info .info-note  {
-		font-size: 11px;
-		color: var(--muted);
-		opacity: 1;
-		margin-top: 4px;
-	  }
-
-	  .ctrl-section { margin-bottom: 12px; }
-
-	  .ctrl-label {
-		font-size: 10px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.07em;
-		color: var(--muted);
-		opacity: 1;
-		margin-bottom: 6px;
-	  }
-
-	  #dateInput {
-		width: 100%;
-		font-family: var(--font-body);
-		font-size: 14px;
-		font-weight: 600;
-		color: var(--text);
-		background: var(--panel-2);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		padding: 10px 12px;
-		outline: none;
-		transition: border-color 0.2s, box-shadow 0.2s;
-		-webkit-appearance: none;
-		appearance: none;
-	  }
-
-	  #dateInput:focus {
-		border-color: var(--brand-2);
-		box-shadow: 0 0 0 3px rgba(10,116,201,0.10);
-	  }
-
-	  .hour-track-wrap {
-		background: var(--panel-2);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		padding: 10px 12px 8px;
-	  }
-
-	  .hour-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 8px;
-		margin-bottom: 8px;
-	  }
-
-	  .hour-hint {
-		font-size: 11px;
-		font-weight: 500;
-		color: var(--muted);
-		opacity: 1;
-	  }
-
-	  .hour-badge {
-		background: linear-gradient(135deg, var(--brand), var(--brand-2));
-		color: white;
-		font-size: 12px;
-		font-weight: 700;
-		padding: 4px 10px;
-		border-radius: 18px;
-		white-space: nowrap;
-		box-shadow: 0 4px 10px rgba(0,94,168,0.18);
-	  }
-
-	  .hour-range-labels {
-		display: flex;
-		justify-content: space-between;
-		font-size: 10px;
-		color: var(--muted);
-		opacity: 1;
-		margin-top: 6px;
-	  }
-
-	  input[type=range] {
-		-webkit-appearance: none;
-		appearance: none;
-		width: 100%;
-		height: 6px;
-		border-radius: 999px;
-		background:
-		  linear-gradient(90deg, rgba(0,94,168,0.18), rgba(0,94,168,0.10));
-		outline: none;
-		cursor: pointer;
-	  }
-
-	  input[type=range]::-webkit-slider-thumb {
-		-webkit-appearance: none;
-		width: 20px;
-		height: 20px;
-		border-radius: 50%;
-		background: #ffffff;
-		border: 3px solid var(--brand);
-		box-shadow: 0 2px 10px rgba(0,94,168,0.22);
-		cursor: grab;
-	  }
-
-	  input[type=range]::-webkit-slider-thumb:active { cursor: grabbing; }
-
-	  input[type=range]::-moz-range-thumb {
-		width: 20px;
-		height: 20px;
-		border-radius: 50%;
-		background: #ffffff;
-		border: 3px solid var(--brand);
-		box-shadow: 0 2px 10px rgba(0,94,168,0.22);
-		cursor: grab;
-	  }
-
-	  #status-pill {
-		position: fixed;
-		bottom: calc(var(--sheet-peek) + 12px);
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: 350;
-		background: var(--brand-dark);
-		color: #ffffff;
-		font-size: 13px;
-		padding: 8px 18px;
-		border-radius: 20px;
-		white-space: nowrap;
-		box-shadow: var(--shadow-md);
-		pointer-events: none;
-		opacity: 0;
-		transition: opacity 0.25s, bottom 0.42s var(--transition);
-	  }
-
-	  #status-pill.visible { opacity: 1; }
-	  #status-pill.error { background: #a61d24; }
-
-	  .spinner {
-		display: inline-block;
-		width: 14px;
-		height: 14px;
-		border: 2px solid rgba(255,255,255,0.3);
-		border-top-color: white;
-		border-radius: 50%;
-		animation: spin 0.7s linear infinite;
-		vertical-align: middle;
-		margin-right: 6px;
-	  }
-
-	  @keyframes spin { to { transform: rotate(360deg); } }
-
-	  #no-result {
-		display: none;
-		text-align: center;
-		padding: 18px 0 10px;
-		color: var(--muted);
-		opacity: 1;
-	  }
-
-	  #no-result svg { margin-bottom: 8px; }
-	  #no-result p { font-size: 13px; }
-
-	  @media (min-width: 720px) {
-		:root {
-		  --sheet-peek: 0px;
-		  --sheet-mid: 0px;
-		  --sheet-full: 0px;
-		}
-
-		#sheet {
-		  position: fixed;
-		  left: 16px;
-		  top: 80px;
-		  bottom: 16px;
-		  right: auto;
-		  width: 360px;
-		  border-radius: var(--radius-xl);
-		  box-shadow: var(--shadow-lg);
-		  transition: none;
-		  touch-action: auto;
-		  overflow: hidden;
-		  display: flex;
-		  flex-direction: column;
-		  height: auto !important;
-		}
-
-		#sheet[data-state] { height: auto !important; }
-
-		#sheet-handle-area { display: none; }
-
-		#sheet-content {
-		  flex: 1;
-		  overflow-y: auto;
-		  padding: 44px 20px 24px;
-		}
-
-		#search-overlay {
-		  left: 16px;
-		  right: auto;
-		  width: 360px;
-		  padding: 16px 0 0;
-		}
-
-		#search-wrap { max-width: none; }
-
-		#status-pill {
-		  bottom: 28px;
-		  left: 50%;
-		}
-
-		#place-header {
-		  display: flex;
-		  align-items: flex-start;
-		  justify-content: space-between;
-		  gap: 12px;
-		  margin-bottom: 12px;
-		}
-	  }
-
-	  #sheet-content::-webkit-scrollbar { width: 4px; }
-	  #sheet-content::-webkit-scrollbar-track { background: transparent; }
-	  #sheet-content::-webkit-scrollbar-thumb {
-		background: rgba(102,120,138,0.25);
-		border-radius: 2px;
-	  }
-
-	  .sheet-top-label {
-		font-size: 11px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.09em;
-		color: var(--brand);
-		margin-bottom: 6px;
-		display: block;
-	  }
-
-	  .divider {
-		height: 1px;
-		background: rgba(22,32,43,0.08);
-		margin: 12px 0;
-	  }
-
-	  @media (max-width: 719px) {
-		#desktop-label,
-		#place-divider {
-		  display: none !important;
-		}
-	  }
-	  
-	  
-	  
-	  .hidden {
-		  display: none !important;
-		}
-
-		.terrace-info-section {
-		  margin-top: 6px;
-		}
-
-		.terrace-info-card {
-		  background: var(--panel-2);
-		  border: 1px solid var(--border);
-		  border-radius: var(--radius-md);
-		  padding: 14px;
-		  display: grid;
-		  gap: 10px;
-		  box-shadow: var(--shadow-sm);
-		}
-
-		.terrace-info-title {
-		  font-size: 16px;
-		  font-weight: 700;
-		  color: var(--brand-dark);
-		  line-height: 1.2;
-		}
-
-		.terrace-info-subtitle {
-		  font-size: 12px;
-		  color: var(--muted);
-		  line-height: 1.4;
-		}
-
-		.terrace-info-grid {
-		  display: grid;
-		  grid-template-columns: 1fr 1fr;
-		  gap: 10px;
-		}
-
-		.info-pill {
-		  background: #fff;
-		  border: 1px solid var(--border);
-		  border-radius: 14px;
-		  padding: 10px 12px;
-		}
-
-		.info-pill-label {
-		  font-size: 10px;
-		  text-transform: uppercase;
-		  letter-spacing: 0.05em;
-		  color: var(--muted);
-		  margin-bottom: 4px;
-		  font-weight: 700;
-		}
-
-		.info-pill-value {
-		  font-size: 16px;
-		  font-weight: 700;
-		  color: var(--text);
-		}
-
-		.terrace-info-list {
-		  display: grid;
 		  gap: 8px;
+		  justify-content: flex-start;
+		  margin-top: 10px;
+		  padding-right: 56px;
+		  pointer-events: all;
+		  overflow: visible;
+		  position: relative;
+		  z-index: 420;
 		}
 
-		.terrace-info-item {
-		  background: #fff;
-		  border: 1px solid var(--border);
-		  border-radius: 12px;
-		  padding: 10px 12px;
-		  font-size: 13px;
-		  color: var(--text);
-		  line-height: 1.4;
-		}
+      /* ── Green filter chip (unchanged) ── */
+      .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        height: 42px;
+        flex-shrink: 0;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid var(--border-2);
+        background: rgba(255,255,255,0.97);
+        color: var(--brand-dark);
+        font-family: var(--font-body);
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        box-shadow: var(--shadow-md);
+        backdrop-filter: blur(10px);
+        cursor: pointer;
+        transition: transform 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
+      }
 
-		.terrace-info-item .info-pill-label {
-		  margin-bottom: 4px;
-		}
+      .filter-chip:active {
+        transform: scale(0.98);
+      }
 
-		.terrace-info-item .info-pill-value {
-		  font-size: 14px;
-		  font-weight: 600;
-		  color: var(--brand-dark);
-		  word-break: break-word;
-		}
+      .filter-chip.is-active {
+        background: linear-gradient(135deg, #e7f5ea, #f7fbf8);
+        border-color: rgba(34, 197, 94, 0.28);
+        color: #166534;
+      }
 
-		.terrace-info-item strong {
-		  color: var(--brand-dark);
-		}
+      /* ── Type selector wrapper ── */
+      .type-filter-wrap {
+        position: relative;
+        flex-shrink: 0;
+      }
 
-		.terrace-marker {
-		  background: var(--brand);
-		  border: 2px solid white;
-		  border-radius: 50%;
-		  box-shadow: 0 2px 8px rgba(0,94,168,0.28);
-		}
+      /* Custom pill trigger button */
+      #type-filter-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        height: 42px;
+        padding: 0 14px 0 14px;
+        border-radius: 999px;
+        border: 1px solid var(--border-2);
+        background: rgba(255,255,255,0.97);
+        color: var(--brand-dark);
+        font-family: var(--font-body);
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        box-shadow: var(--shadow-md);
+        backdrop-filter: blur(10px);
+        cursor: pointer;
+        transition: transform 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
+        outline: none;
+        user-select: none;
+      }
 
-		.terrace-marker.selected {
-		  background: var(--brand-dark);
-		  transform: scale(1.1);
-		}
+      #type-filter-btn:active {
+        transform: scale(0.98);
+      }
 
-		@media (max-width: 719px) {
-		  .terrace-info-grid {
-			grid-template-columns: 1fr 1fr;
-		  }
-		}
-	  
-	    
-		#ranking-link,
-		#info-link {
-		  position: absolute;
-		  right: 4px;
-		  width: 42px;
-		  height: 42px;
-		  border-radius: 50%;
-		  background: rgba(255,255,255,0.96);
-		  border: 1px solid var(--border-2);
-		  box-shadow: var(--shadow-md);
-		  display: flex;
-		  align-items: center;
-		  justify-content: center;
-		  text-decoration: none;
-		  z-index: 410;
-		  backdrop-filter: blur(10px);
-		}
+      #type-filter-btn.has-value {
+        background: linear-gradient(135deg, #eef6ff, #f8fbff);
+        border-color: rgba(10,116,201,0.28);
+        color: var(--brand-dark);
+      }
 
-		#ranking-link {
-		  top: 54px;
-		}
+      .type-btn-prefix {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--muted);
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
 
-		#info-link {
-		  top: 102px;
-		}
+      .type-btn-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--brand-dark);
+        max-width: 90px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
-		#ranking-link:hover,
-		#info-link:hover {
-		  transform: translateY(-1px);
-		}
+      .type-btn-chevron {
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
+        color: var(--muted);
+        transition: transform 0.22s var(--transition);
+      }
 
-		@media (min-width: 720px) {
-		  #info-link {
-			display: none;
-		  }
-		}
-			  
-	  
+      #type-filter-btn[aria-expanded="true"] .type-btn-chevron {
+        transform: rotate(180deg);
+      }
 
-		#mobile-filters-bar {
-		  display: none;
-		}
+      /* Dropdown panel */
+      #type-filter-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        min-width: 180px;
+        background: rgba(255,255,255,0.98);
+        border: 1px solid var(--border-2);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        backdrop-filter: blur(14px);
+        overflow: hidden;
+        z-index: 500;
+        display: none;
+        transform-origin: top left;
+        animation: dropIn 0.18s var(--transition);
+      }
 
-		@media (max-width: 719px) {
-		  #mobile-filters-bar {
-			display: flex;
-			align-items: center;
-			justify-content: flex-start;
-			margin-top: 10px;
-			padding-right: 110px;
-			pointer-events: all;
-		  }
-		  .filter-chip {
-			display: inline-flex;
-			align-items: center;
-			gap: 8px;
-			height: 42px;
-			padding: 0 14px;
-			border-radius: 999px;
-			border: 1px solid var(--border-2);
-			background: rgba(255,255,255,0.96);
-			color: var(--brand-dark);
-			font-family: var(--font-body);
-			font-size: 13px;
-			font-weight: 600;
-			box-shadow: var(--shadow-md);
-			backdrop-filter: blur(10px);
-			cursor: pointer;
-			transition: transform 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
-		  }
+      #type-filter-dropdown.open {
+        display: block;
+      }
 
-		  .filter-chip:active {
-			transform: scale(0.98);
-		  }
+      @keyframes dropIn {
+        from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+        to   { opacity: 1; transform: scale(1)    translateY(0); }
+      }
 
-		  .filter-chip.is-active {
-			background: linear-gradient(135deg, #e7f5ea, #f7fbf8);
-			border-color: rgba(34, 197, 94, 0.28);
-			color: #166534;
-		  }
-		}
-		
-		
-		#shadow-legend {
-		  position: fixed;
-		  left: 12px;
-		  bottom: calc(var(--sheet-peek) + 16px);
-		  z-index: 345;
-		  min-width: 170px;
-		  background: rgba(255,255,255,0.95);
-		  border: 1px solid var(--border-2);
-		  border-radius: 16px;
-		  padding: 10px 12px;
-		  box-shadow: var(--shadow-md);
-		  backdrop-filter: blur(10px);
-		  transition: opacity 0.2s, transform 0.2s;
-		}
+      .type-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 16px;
+        font-family: var(--font-body);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+        cursor: pointer;
+        border-bottom: 1px solid rgba(22,32,43,0.05);
+        transition: background 0.12s;
+        -webkit-tap-highlight-color: transparent;
+      }
 
-		#shadow-legend.hidden {
-		  opacity: 0;
-		  transform: translateY(6px);
-		  pointer-events: none;
-		}
+      .type-option:last-child {
+        border-bottom: none;
+      }
 
-		.legend-title {
-		  font-size: 10px;
-		  font-weight: 700;
-		  text-transform: uppercase;
-		  letter-spacing: 0.06em;
-		  color: var(--muted);
-		  margin-bottom: 6px;
-		}
+      .type-option:hover,
+      .type-option.active {
+        background: rgba(0,94,168,0.06);
+      }
 
-		.legend-scale {
-		  display: grid;
-		  grid-template-columns: repeat(4, 1fr);
-		  gap: 6px;
-		  margin-bottom: 6px;
-		}
+      .type-option.selected {
+        color: var(--brand-dark);
+        font-weight: 700;
+      }
 
-		.lg-stop {
-		  height: 12px;
-		  border-radius: 999px;
-		  border: 1px solid rgba(255,255,255,0.75);
-		}
+      .type-option-check {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        color: var(--brand);
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
 
-		.lg-stop.shade { background: #2f6fb3; }
-		.lg-stop.soft  { background: #6fa8dc; }
-		.lg-stop.warm  { background: #f4b942; }
-		.lg-stop.sun   { background: #d8572a; }
+      .type-option.selected .type-option-check {
+        opacity: 1;
+      }
 
-		.legend-labels {
-		  display: flex;
-		  justify-content: space-between;
-		  gap: 10px;
-		  font-size: 10px;
-		  color: var(--muted);
-		}
+      .type-option-icon {
+        font-size: 15px;
+        flex-shrink: 0;
+        line-height: 1;
+      }
+    }
 
-		@media (min-width: 720px) {
-		  #shadow-legend {
-			display: none;
-		  }
-		}
+    /* ── DESKTOP ── */
+    @media (min-width: 720px) {
+      :root {
+        --sheet-peek: 0px;
+        --sheet-mid: 0px;
+        --sheet-full: 0px;
+      }
 
-		@media (min-width: 720px) {
-		  #shadow-legend {
-			display: none;
-		  }
-		}
-	  
-	</style>
+      #sheet {
+        position: fixed;
+        left: 16px;
+        top: 80px;
+        bottom: 16px;
+        right: auto;
+        width: 360px;
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-lg);
+        transition: none;
+        touch-action: auto;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: auto !important;
+      }
+
+      #sheet[data-state] { height: auto !important; }
+      #sheet-handle-area { display: none; }
+
+      #sheet-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 44px 20px 24px;
+      }
+
+      #search-overlay {
+        left: 16px;
+        right: auto;
+        width: 360px;
+        padding: 16px 0 0;
+      }
+
+      #search-wrap { max-width: none; }
+
+      #status-pill {
+        bottom: 28px;
+        left: 50%;
+      }
+
+      #place-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      #info-link {
+        display: none;
+      }
+
+      #shadow-legend {
+        display: none;
+      }
+    }
+  </style>
 </head>
 <body>
 
@@ -927,43 +1100,81 @@
         <input id="rotuloSearchInput" type="text" placeholder="Busca por bar…" autocomplete="off" autocorrect="off" spellcheck="false" />
         <button id="search-clear" aria-label="Borrar búsqueda">×</button>
       </div>
+
       <div id="autocompleteList" role="listbox"></div>
-	  <div id="mobile-filters-bar">
-		  <button
-			id="green-filter-toggle"
-			type="button"
-			class="filter-chip"
-			aria-pressed="false"
-			aria-label="Filtrar terrazas con zonas verdes cercanas"
-			title="Mostrar solo terrazas con zona verde cercana"
-		  >
-			<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-			  <path
-				d="M12 21c0-4.2 1.2-7.2 3.4-9.4 2.3-2.3 5.1-3.3 6.1-3.6.2 1-.1 3.8-2.4 6.1-2 2-4.5 3-7.1 3.2M12 21c0-3.6-.9-6.1-2.7-7.9C7.1 10.9 4.4 10 3.3 9.7c-.2 1 .1 3.6 2.2 5.7 1.8 1.8 4 2.8 6.5 3"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.8"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			  />
-			</svg>
-			<span>Zonas verdes a 50m</span>
-		  </button>
-		</div>
-	  <a id="ranking-link" href="./ranking.html" aria-label="Ir al ranking de terrazas">
-		  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-			<rect x="3" y="11" width="4" height="8" rx="1.5" fill="#22c55e"></rect>
-			<rect x="10" y="7" width="4" height="12" rx="1.5" fill="#8b5cf6"></rect>
-			<rect x="17" y="4" width="4" height="15" rx="1.5" fill="#06b6d4"></rect>
-		  </svg>
-		</a>
-		<a id="info-link" href="./Infoterrazas.html" aria-label="Ir a información adicional">
-		  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-			<circle cx="12" cy="12" r="9" fill="none" stroke="#0f3d68" stroke-width="2"></circle>
-			<line x1="12" y1="10" x2="12" y2="16" stroke="#0f3d68" stroke-width="2" stroke-linecap="round"></line>
-			<circle cx="12" cy="7" r="1.2" fill="#0f3d68"></circle>
-		  </svg>
-		</a>
+
+      <!-- Mobile filters bar -->
+      <div id="mobile-filters-bar">
+
+        <!-- Green areas chip (unchanged) -->
+        <button
+          id="green-filter-toggle"
+          type="button"
+          class="filter-chip"
+          aria-pressed="false"
+          aria-label="Filtrar terrazas con zonas verdes cercanas"
+          title="Mostrar solo terrazas con zona verde cercana"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path
+              d="M12 21c0-4.2 1.2-7.2 3.4-9.4 2.3-2.3 5.1-3.3 6.1-3.6.2 1-.1 3.8-2.4 6.1-2 2-4.5 3-7.1 3.2M12 21c0-3.6-.9-6.1-2.7-7.9C7.1 10.9 4.4 10 3.3 9.7c-.2 1 .1 3.6 2.2 5.7 1.8 1.8 4 2.8 6.5 3"
+              fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round"
+            />
+          </svg>
+          <span>Zonas verdes a 50m</span>
+        </button>
+
+        <!-- Custom type selector -->
+        <div class="type-filter-wrap">
+          <button
+            id="type-filter-btn"
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-label="Filtrar por tipo de local"
+          >
+            <span class="type-btn-prefix">Tipo</span>
+            <span class="type-btn-label" id="type-btn-label-text">Todos</span>
+            <svg class="type-btn-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+
+          <div id="type-filter-dropdown" role="listbox" aria-label="Tipo de local">
+            <!-- Options injected by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Floating circular buttons -->
+      <a id="ranking-link" href="./ranking.html" aria-label="Ir al ranking de terrazas">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <rect x="3" y="11" width="4" height="8" rx="1.5" fill="#22c55e"/>
+          <rect x="10" y="7" width="4" height="12" rx="1.5" fill="#8b5cf6"/>
+          <rect x="17" y="4" width="4" height="15" rx="1.5" fill="#06b6d4"/>
+        </svg>
+      </a>
+
+      <button id="locate-btn" type="button" aria-label="Centrar mapa en mi ubicación">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0f3d68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <line x1="12" y1="2" x2="12" y2="5"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="2"  y1="12" x2="5"  y2="12"/>
+          <line x1="19" y1="12" x2="22" y2="12"/>
+          <circle cx="12" cy="12" r="7" stroke-opacity="0.3"/>
+        </svg>
+      </button>
+
+      <a id="info-link" href="./Infoterrazas.html" aria-label="Ir a información adicional">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="#0f3d68" stroke-width="2"/>
+          <line x1="12" y1="10" x2="12" y2="16" stroke="#0f3d68" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="12" cy="7" r="1.2" fill="#0f3d68"/>
+        </svg>
+      </a>
     </div>
   </div>
 
@@ -971,12 +1182,12 @@
     <div id="sheet-handle-area" aria-hidden="true">
       <div class="handle-pill"></div>
     </div>
-	
-	<div id="sheet-content">
-	  <button id="sheet-close" aria-label="Cerrar panel">×</button>
-	  <span class="sheet-top-label" style="display:none" id="desktop-label">Visor de Sombras</span>
-    
-		<div id="place-header">
+
+    <div id="sheet-content">
+      <button id="sheet-close" aria-label="Cerrar panel">×</button>
+      <span class="sheet-top-label" style="display:none" id="desktop-label">Visor de Sombras</span>
+
+      <div id="place-header">
         <div id="place-name" class="empty">Selecciona una terraza</div>
       </div>
 
@@ -986,7 +1197,7 @@
         <div class="ring-svg-wrap">
           <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <circle id="ring-track" cx="36" cy="36" r="28" fill="none" stroke-width="7"/>
-            <circle id="ring-fill"  cx="36" cy="36" r="28" fill="none" stroke-width="7"
+            <circle id="ring-fill" cx="36" cy="36" r="28" fill="none" stroke-width="7"
               stroke-dasharray="175.93"
               stroke-dashoffset="175.93"/>
           </svg>
@@ -1000,7 +1211,11 @@
       </div>
 
       <div id="no-result">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <circle cx="12" cy="12" r="9"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <circle cx="12" cy="16" r="0.5" fill="currentColor"/>
+        </svg>
         <p>Sin datos para esta selección</p>
       </div>
 
@@ -1020,16 +1235,31 @@
           </div>
           <input id="hourSlider" type="range" min="6" max="21" step="1" value="12" aria-label="Hora" />
           <div class="hour-range-labels"><span>6:00</span><span>21:00</span></div>
-        </div>		
-		<div id="terrace-info-section" class="ctrl-section terrace-info-section hidden">
-		  <div class="ctrl-label">Información de la terraza</div>
-		  <div id="terrace-info-card" class="terrace-info-card"></div>
-		</div>
+        </div>
+
+        <div id="terrace-info-section" class="ctrl-section terrace-info-section hidden">
+          <div class="ctrl-label">Información de la terraza</div>
+          <div id="terrace-info-card" class="terrace-info-card"></div>
+        </div>
       </div>
     </div>
   </div>
 
   <div id="status-pill" role="status" aria-live="polite"></div>
+
+  <div id="shadow-legend" aria-hidden="true">
+    <div class="legend-title">Exposición al sol</div>
+    <div class="legend-scale">
+      <span class="lg-stop shade"></span>
+      <span class="lg-stop soft"></span>
+      <span class="lg-stop warm"></span>
+      <span class="lg-stop sun"></span>
+    </div>
+    <div class="legend-labels">
+      <span>Más sombra</span>
+      <span>Más sol ☀️</span>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.2/proj4.js"></script>
@@ -1044,9 +1274,8 @@
     const FILE_BASENAME = 'terrace_shadows';
     const FILE_SUFFIX = '.parquet';
     const ROTULOS_JSON_URL = './rotulos_terrazas_index.json';
-	const TERRACES_GEOJSON_URL = './terrazas.geojson';
-	
-	
+    const TERRACES_GEOJSON_URL = './terrazas.geojson';
+
     const MIN_DATE = '2026-01-01';
     const MAX_DATE = '2026-12-31';
 
@@ -1074,13 +1303,14 @@
     let selectedSuggIdx = -1;
     let selectedTerraceId = null;
     let selectedRotulo = null;
-	
-	let terracesGeojson = null;
-	let terracesLayer = null;
-	let selectedTerraceFeature = null;
-	
-	let greenFilterActive = false;
-	let shadowByTerraceId = new Map();
+
+    let terracesGeojson = null;
+    let terracesLayer = null;
+    let selectedTerraceFeature = null;
+
+    let greenFilterActive = false;
+    let shadowByTerraceId = new Map();
+    let activityTypeFilter = '';
 
     const registeredWeekAliases = new Set();
 
@@ -1100,17 +1330,24 @@
     const noResult = document.getElementById('no-result');
     const desktopLabel = document.getElementById('desktop-label');
     const sheetClose = document.getElementById('sheet-close');
-	const handleArea = document.getElementById('sheet-handle-area');
-	
-	
-	const terraceInfoSection = document.getElementById('terrace-info-section');
-	const terraceInfoCard = document.getElementById('terrace-info-card');
-	const greenFilterToggle = document.getElementById('green-filter-toggle');
-	const shadowLegend = document.getElementById('shadow-legend');
-	
+    const handleArea = document.getElementById('sheet-handle-area');
+
+    const terraceInfoSection = document.getElementById('terrace-info-section');
+    const terraceInfoCard = document.getElementById('terrace-info-card');
+    const greenFilterToggle = document.getElementById('green-filter-toggle');
+    const shadowLegend = document.getElementById('shadow-legend');
+
+    /* ── Custom type filter elements ── */
+    const typeFilterBtn      = document.getElementById('type-filter-btn');
+    const typeFilterDropdown = document.getElementById('type-filter-dropdown');
+    const typeBtnLabelText   = document.getElementById('type-btn-label-text');
+
+    /* ── Geolocation button ── */
+    const locateBtn = document.getElementById('locate-btn');
+
     const map = L.map('map', {
-	  center: [40.4168, -3.7038],
-	  zoom: isMobileLayout() ? 12 : 11,
+      center: [40.4168, -3.7038],
+      zoom: isMobileLayout() ? 12 : 11,
       minZoom: MAP_MIN_ZOOM,
       maxZoom: MAP_MAX_ZOOM,
       maxBounds: MADRID_BOUNDS.pad(0.15),
@@ -1127,11 +1364,9 @@
     }).addTo(map);
 
     map.fitBounds(MADRID_BOUNDS, {
-	  padding: isMobileLayout() ? [16, 16] : [20, 20],
-	  maxZoom: isMobileLayout() ? 12 : 11
-	});
-
-	//L.control.zoom({ position: 'topright' }).addTo(map);
+      padding: isMobileLayout() ? [16, 16] : [20, 20],
+      maxZoom: isMobileLayout() ? 12 : 11
+    });
 
     proj4.defs(
       SOURCE_EPSG,
@@ -1155,31 +1390,53 @@
     function isMobileLayout() {
       return window.innerWidth < 720;
     }
-	
-	
-	
-	function updateLegendVisibility() {
-	  if (!shadowLegend) return;
 
-	  const shouldShow = isMobileLayout() && sheetState === 'peek';
+    function normalizeText(text) {
+      return String(text ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, ' ');
+    }
 
-	  shadowLegend.classList.toggle('hidden', !shouldShow);
+    function normalizeActivityType(value) {
+      const txt = normalizeText(value);
+      if (!txt) return '';
+      if (txt === 'sin clasificar' || txt === 'no hosteleria') return '';
+      return txt;
+    }
+
+    function matchesActivityType(feature, selectedType) {
+	  if (!selectedType) return true;
+
+	  const activity = normalizeActivityType(feature?.properties?.tipo_actividad);
+	  const meta = TYPE_OPTION_META[selectedType];
+
+	  if (!meta || !Array.isArray(meta.match) || !meta.match.length) {
+		return true;
+	  }
+
+	  return meta.match.some(m => activity.includes(m));
 	}
+
+    function updateLegendVisibility() {
+      if (!shadowLegend) return;
+      const shouldShow = isMobileLayout() && sheetState === 'peek';
+      shadowLegend.classList.toggle('hidden', !shouldShow);
+    }
 
     function setSheetState(state, animate = true) {
-	  sheetState = state;
-	  if (!animate) sheet.style.transition = 'none';
-	  sheet.dataset.state = state;
-	  if (!animate) setTimeout(() => { sheet.style.transition = ''; }, 50);
+      sheetState = state;
+      if (!animate) sheet.style.transition = 'none';
+      sheet.dataset.state = state;
+      if (!animate) setTimeout(() => { sheet.style.transition = ''; }, 50);
 
-	  const h = state === 'peek' ? peekH() : state === 'mid' ? midH() : fullH();
-	  statusPill.style.bottom = (h + 12) + 'px';
+      const h = state === 'peek' ? peekH() : state === 'mid' ? midH() : fullH();
+      statusPill.style.bottom = (h + 12) + 'px';
 
-	  updateLegendVisibility();
-	}
-	
-	
-	
+      updateLegendVisibility();
+    }
 
     function onDragStart(clientY) {
       isDragging = true;
@@ -1217,10 +1474,11 @@
     handleArea.addEventListener('mousedown', e => onDragStart(e.clientY));
     document.addEventListener('mousemove', e => { if (isDragging) onDragMove(e.clientY); });
     document.addEventListener('mouseup', () => { if (isDragging) onDragEnd(); });
-	sheetClose.addEventListener('click', () => {
-	  setSheetState('peek');
-	  terraceInfoSection.classList.add('hidden');
-	});
+
+    sheetClose.addEventListener('click', () => {
+      setSheetState('peek');
+      terraceInfoSection.classList.add('hidden');
+    });
 
     let statusTimeout = null;
 
@@ -1258,15 +1516,6 @@
       return Number.isFinite(n) ? n : null;
     }
 
-    function normalizeText(text) {
-      return String(text ?? '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, ' ');
-    }
-
     function escapeHtml(str) {
       return String(str ?? '')
         .replaceAll('&', '&amp;')
@@ -1282,157 +1531,121 @@
       const pct = n <= 1 ? n * 100 : n;
       return `${Math.min(pct, 100).toFixed(1)} %`;
     }
-	
-	
-	function buildAllTerracesShadowQuery(alias, selectedDate, selectedHour) {
-	  const representativeDate = getRepresentativeWednesdayDateForSelectedWeek(selectedDate);
 
-	  return `
-		SELECT
-		  terraza_id,
-		  shadow_pct
-		FROM read_parquet('${alias}')
-		WHERE substr(
-		  coalesce(cast(date as varchar), cast(datetime as varchar)),
-		  1,
-		  10
-		) = '${representativeDate}'
-		  AND EXTRACT(HOUR FROM datetime) = ${Number(selectedHour)}
-	  `;
-	}
-	
-	
-	async function refreshTerraceShadowColors() {
-	  if (!db || !conn || !terracesGeojson) return;
+    function buildAllTerracesShadowQuery(alias, selectedDate, selectedHour) {
+      const representativeDate = getRepresentativeWednesdayDateForSelectedWeek(selectedDate);
+      return `
+        SELECT terraza_id, shadow_pct
+        FROM read_parquet('${alias}')
+        WHERE substr(
+          coalesce(cast(date as varchar), cast(datetime as varchar)), 1, 10
+        ) = '${representativeDate}'
+          AND EXTRACT(HOUR FROM datetime) = ${Number(selectedHour)}
+      `;
+    }
 
-	  const selectedDate = dateInput.value;
-	  const selectedHour = Number(hourSlider.value);
+    async function refreshTerraceShadowColors() {
+      if (!db || !conn || !terracesGeojson) return;
 
-	  try {
-		const { alias } = await ensureWeekRegistered(selectedDate);
-		const sql = buildAllTerracesShadowQuery(alias, selectedDate, selectedHour);
-		const result = await conn.query(sql);
-		const rows = await arrowTableToRows(result);
+      const selectedDate = dateInput.value;
+      const selectedHour = Number(hourSlider.value);
 
-		shadowByTerraceId.clear();
+      try {
+        const { alias } = await ensureWeekRegistered(selectedDate);
+        const sql = buildAllTerracesShadowQuery(alias, selectedDate, selectedHour);
+        const result = await conn.query(sql);
+        const rows = await arrowTableToRows(result);
 
-		for (const row of rows) {
-		  const tid = Number(row.terraza_id);
-		  if (Number.isFinite(tid)) {
-			shadowByTerraceId.set(tid, row.shadow_pct);
-		  }
-		}
+        shadowByTerraceId.clear();
+        for (const row of rows) {
+          const tid = Number(row.terraza_id);
+          if (Number.isFinite(tid)) {
+            shadowByTerraceId.set(tid, row.shadow_pct);
+          }
+        }
 
-		renderTerracesLayer();
-	  } catch (err) {
-		console.error('Error actualizando colores de sombra:', err);
-	  }
-	}
-	
-	function toIntOrDash(v) {
-	  const n = Number(v);
-	  return Number.isFinite(n) ? n : '—';
-	}
+        renderTerracesLayer();
+      } catch (err) {
+        console.error('Error actualizando colores de sombra:', err);
+      }
+    }
 
-	function boolToYesNo(v) {
-	  if (v === true) return 'Sí';
-	  if (v === false) return 'No';
-	  return '—';
-	}
+    function toIntOrDash(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : '—';
+    }
 
-	function safeText(v) {
-	  if (v === null || v === undefined || v === '') return '—';
-	  return String(v).trim() || '—';
-	}
+    function safeText(v) {
+      if (v === null || v === undefined || v === '') return '—';
+      return String(v).trim() || '—';
+    }
 
-	function buildHorarioText(props) {
-	  const lj = props.hora_ini_LJ_es && props.hora_fin_LJ_es
-		? `${props.hora_ini_LJ_es} – ${props.hora_fin_LJ_es}`
-		: null;
+    function renderTerraceInfo(feature) {
+      if (!feature || !feature.properties) {
+        terraceInfoSection.classList.add('hidden');
+        terraceInfoCard.innerHTML = '';
+        return;
+      }
 
-	  const vs = props.hora_ini_VS_es && props.hora_fin_VS_es
-		? `${props.hora_ini_VS_es} – ${props.hora_fin_VS_es}`
-		: null;
+      const p = feature.properties;
 
-	  if (!lj && !vs) return '—';
-	  if (lj && vs) return `L-J: ${lj} · V-S: ${vs}`;
-	  return lj || vs;
-	}
+      const totalEstufas =
+        (Number(p.estufas_gas_es) || 0) +
+        (Number(p.estufas_electricas_es) || 0);
 
-	function renderTerraceInfo(feature) {
-	  if (!feature || !feature.properties) {
-		terraceInfoSection.classList.add('hidden');
-		terraceInfoCard.innerHTML = '';
-		return;
-	  }
+      const subtitle = [
+        safeText(p.desc_nombre),
+        safeText(p.num_terraza),
+        safeText(p.desc_barrio_local)
+      ].filter(v => v !== '—').join(' · ');
 
-	  const p = feature.properties;
+      terraceInfoCard.innerHTML = `
+        <div class="terrace-info-title">${escapeHtml(safeText(p.rotulo))}</div>
+        <div class="terrace-info-subtitle">${escapeHtml(subtitle || 'Terraza seleccionada')}</div>
+        <div class="terrace-info-grid">
+          <div class="info-pill">
+            <div class="info-pill-label">Mesas</div>
+            <div class="info-pill-value">${escapeHtml(toIntOrDash(p.mesas_es))}</div>
+          </div>
+          <div class="info-pill">
+            <div class="info-pill-label">Sillas</div>
+            <div class="info-pill-value">${escapeHtml(toIntOrDash(p.sillas_es))}</div>
+          </div>
+          <div class="info-pill">
+            <div class="info-pill-label">Sombrillas</div>
+            <div class="info-pill-value">${escapeHtml(toIntOrDash(p.sombrillas_es))}</div>
+          </div>
+          <div class="info-pill">
+            <div class="info-pill-label">Estufas</div>
+            <div class="info-pill-value">${escapeHtml(toIntOrDash(totalEstufas))}</div>
+          </div>
+        </div>
+        <div class="terrace-info-list">
+          <div class="terrace-info-item">
+            <div class="info-pill-label">Horario L-J</div>
+            <div class="info-pill-value">
+              ${escapeHtml(
+                p.hora_ini_LJ_es && p.hora_fin_LJ_es
+                  ? `${p.hora_ini_LJ_es} – ${p.hora_fin_LJ_es}`
+                  : '—'
+              )}
+            </div>
+          </div>
+          <div class="terrace-info-item">
+            <div class="info-pill-label">Horario V-S</div>
+            <div class="info-pill-value">
+              ${escapeHtml(
+                p.hora_ini_VS_es && p.hora_fin_VS_es
+                  ? `${p.hora_ini_VS_es} – ${p.hora_fin_VS_es}`
+                  : '—'
+              )}
+            </div>
+          </div>
+        </div>
+      `;
 
-	  const totalEstufas =
-		(Number(p.estufas_gas_es) || 0) +
-		(Number(p.estufas_electricas_es) || 0);
-
-	  const toldos =
-		Number.isFinite(Number(p.toldos_pavimento_es))
-		  ? Number(p.toldos_pavimento_es)
-		  : 0;
-
-	  const subtitle = [
-		safeText(p.desc_nombre),
-		safeText(p.num_terraza),
-		safeText(p.desc_barrio_local)
-	  ].filter(v => v !== '—').join(' · ');
-
-	  terraceInfoCard.innerHTML = `
-		<div class="terrace-info-title">${escapeHtml(safeText(p.rotulo))}</div>
-		<div class="terrace-info-subtitle">${escapeHtml(subtitle || 'Terraza seleccionada')}</div>
-
-		<div class="terrace-info-grid">
-		  <div class="info-pill">
-			<div class="info-pill-label">Mesas</div>
-			<div class="info-pill-value">${escapeHtml(toIntOrDash(p.mesas_es))}</div>
-		  </div>
-		  <div class="info-pill">
-			<div class="info-pill-label">Sillas</div>
-			<div class="info-pill-value">${escapeHtml(toIntOrDash(p.sillas_es))}</div>
-		  </div>
-		  <div class="info-pill">
-			<div class="info-pill-label">Sombrillas</div>
-			<div class="info-pill-value">${escapeHtml(toIntOrDash(p.sombrillas_es))}</div>
-		  </div>
-		  <div class="info-pill">
-			<div class="info-pill-label">Estufas</div>
-			<div class="info-pill-value">${escapeHtml(toIntOrDash(totalEstufas))}</div>
-		  </div>
-		</div>
-
-		<div class="terrace-info-list">
-		  <div class="terrace-info-item">
-			<div class="info-pill-label">Horario L-J</div>
-			<div class="info-pill-value">
-			  ${escapeHtml(
-				p.hora_ini_LJ_es && p.hora_fin_LJ_es
-				  ? `${p.hora_ini_LJ_es} – ${p.hora_fin_LJ_es}`
-				  : '—'
-			  )}
-			</div>
-		  </div>
-
-		  <div class="terrace-info-item">
-			<div class="info-pill-label">Horario V-S</div>
-			<div class="info-pill-value">
-			  ${escapeHtml(
-				p.hora_ini_VS_es && p.hora_fin_VS_es
-				  ? `${p.hora_ini_VS_es} – ${p.hora_fin_VS_es}`
-				  : '—'
-			  )}
-			</div>
-		  </div>
-		</div>
-	  `;
-
-	  terraceInfoSection.classList.remove('hidden');
-	}
+      terraceInfoSection.classList.remove('hidden');
+    }
 
     function updateRing(pct) {
       if (pct === null) {
@@ -1465,15 +1678,12 @@
 
     function toYMD(value) {
       if (!value) return null;
-
       if (typeof value === 'string') {
         const m = value.match(/^(\d{4}-\d{2}-\d{2})/);
         if (m) return m[1];
       }
-
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return null;
-
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
@@ -1482,35 +1692,26 @@
 
     function getHourFromDatetime(value) {
       if (!value) return null;
-
       if (typeof value === 'string') {
         const m = value.match(/T(\d{2}):/);
         if (m) return Number(m[1]);
-
         const m2 = value.match(/ (\d{2}):/);
         if (m2) return Number(m2[1]);
       }
-
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return null;
-
       return d.getHours();
     }
 
     function getIsoWeekInfo(dateString) {
       const date = new Date(dateString + 'T00:00:00');
-      if (Number.isNaN(date.getTime())) {
-        throw new Error(`Fecha inválida: ${dateString}`);
-      }
-
+      if (Number.isNaN(date.getTime())) throw new Error(`Fecha inválida: ${dateString}`);
       const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
       const dayNum = tmp.getUTCDay() || 7;
       tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
-
       const isoYear = tmp.getUTCFullYear();
       const yearStart = new Date(Date.UTC(isoYear, 0, 1));
       const isoWeek = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
-
       return { isoYear, isoWeek };
     }
 
@@ -1518,11 +1719,9 @@
       const simple = new Date(Date.UTC(isoYear, 0, 4 + (isoWeek - 1) * 7));
       const dow = simple.getUTCDay() || 7;
       simple.setUTCDate(simple.getUTCDate() - dow + isoWeekday);
-
       const y = simple.getUTCFullYear();
       const m = String(simple.getUTCMonth() + 1).padStart(2, '0');
       const d = String(simple.getUTCDate()).padStart(2, '0');
-
       return `${y}-${m}-${d}`;
     }
 
@@ -1547,102 +1746,60 @@
 
     function transformCoords25830To4326(coords) {
       if (!Array.isArray(coords)) return coords;
-
       if (coords.length >= 2 && !Array.isArray(coords[0])) {
         const x = Number(coords[0]);
         const y = Number(coords[1]);
-
-        if (!isFiniteNumber(x) || !isFiniteNumber(y)) {
-          throw new Error('Coordenadas no finitas detectadas');
-        }
-
+        if (!isFiniteNumber(x) || !isFiniteNumber(y)) throw new Error('Coordenadas no finitas detectadas');
         const result = proj4(SOURCE_EPSG, TARGET_EPSG, [x, y]);
         const lon = Number(result[0]);
         const lat = Number(result[1]);
-
-        if (!isFiniteNumber(lon) || !isFiniteNumber(lat)) {
-          throw new Error('Reproyección inválida');
-        }
-
+        if (!isFiniteNumber(lon) || !isFiniteNumber(lat)) throw new Error('Reproyección inválida');
         return [lon, lat];
       }
-
       return coords.map(transformCoords25830To4326);
     }
 
     function reprojectGeometry(geometry) {
       if (!geometry || !geometry.type) return null;
-
       if (geometry.type === 'GeometryCollection') {
         return {
           ...geometry,
-          geometries: (geometry.geometries || [])
-            .map(reprojectGeometry)
-            .filter(Boolean),
+          geometries: (geometry.geometries || []).map(reprojectGeometry).filter(Boolean),
         };
       }
-
       if (!geometry.coordinates) return null;
-
-      return {
-        ...geometry,
-        coordinates: transformCoords25830To4326(geometry.coordinates),
-      };
+      return { ...geometry, coordinates: transformCoords25830To4326(geometry.coordinates) };
     }
 
     function toUint8Array(value) {
       if (!value) return null;
-
       if (value instanceof Uint8Array) return value;
       if (value instanceof ArrayBuffer) return new Uint8Array(value);
       if (Array.isArray(value)) return new Uint8Array(value);
-
-      if (ArrayBuffer.isView(value)) {
-        return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
-      }
-
+      if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
       if (typeof value === 'object') {
         const vals = Object.values(value);
-        if (vals.length && vals.every(v => Number.isFinite(Number(v)))) {
-          return new Uint8Array(vals.map(v => Number(v)));
-        }
+        if (vals.length && vals.every(v => Number.isFinite(Number(v)))) return new Uint8Array(vals.map(v => Number(v)));
       }
-
       return null;
     }
 
     function isLikelyGeoJSONGeometry(value) {
-      return (
-        value &&
-        typeof value === 'object' &&
-        typeof value.type === 'string' &&
-        (Array.isArray(value.coordinates) || Array.isArray(value.geometries))
-      );
+      return value && typeof value === 'object' && typeof value.type === 'string' &&
+        (Array.isArray(value.coordinates) || Array.isArray(value.geometries));
     }
 
     function decodeWkbGeometry(value) {
-      if (!value) {
-        throw new Error('geometry vacía');
-      }
-
-      if (typeof value === 'string') {
-        const geom = wkx.Geometry.parse(value);
-        return geom.toGeoJSON();
-      }
-
+      if (!value) throw new Error('geometry vacía');
+      if (typeof value === 'string') return wkx.Geometry.parse(value).toGeoJSON();
       const bytes = toUint8Array(value);
-      if (!bytes) {
-        throw new Error('No se pudo convertir geometry');
-      }
-
-      const geom = wkx.Geometry.parse(Buffer.from(bytes));
-      return geom.toGeoJSON();
+      if (!bytes) throw new Error('No se pudo convertir geometry');
+      return wkx.Geometry.parse(Buffer.from(bytes)).toGeoJSON();
     }
 
     function getGeometryFromRow(row, rowIndex) {
       const raw = row.geometry;
       if (!raw) throw new Error(`Fila ${rowIndex}: geometry vacía`);
-
       if (isLikelyGeoJSONGeometry(raw)) return raw;
       return decodeWkbGeometry(raw);
     }
@@ -1650,11 +1807,7 @@
     function rowToFeature(row, rowIndex = null) {
       const sourceGeometry = getGeometryFromRow(row, rowIndex);
       const geom4326 = reprojectGeometry(sourceGeometry);
-
-      if (!geom4326) {
-        throw new Error(`Fila ${rowIndex}: no se pudo reproyectar la geometría`);
-      }
-
+      if (!geom4326) throw new Error(`Fila ${rowIndex}: no se pudo reproyectar la geometría`);
       return {
         type: 'Feature',
         geometry: geom4326,
@@ -1675,7 +1828,6 @@
     function normalizeDuckRow(row) {
       if (!row) return row;
       if (typeof row.toJSON === 'function') return row.toJSON();
-
       const obj = {};
       for (const key of Object.keys(row)) {
         const value = row[key];
@@ -1693,25 +1845,15 @@
     async function loadRotulosCatalog() {
       try {
         const res = await fetch(ROTULOS_JSON_URL, { cache: 'no-store' });
-        if (!res.ok) {
-          throw new Error(`No se pudo leer ${ROTULOS_JSON_URL}`);
-        }
-
+        if (!res.ok) throw new Error(`No se pudo leer ${ROTULOS_JSON_URL}`);
         const data = await res.json();
-        if (!Array.isArray(data)) {
-          throw new Error('El JSON de rótulos no es un array');
-        }
-
+        if (!Array.isArray(data)) throw new Error('El JSON de rótulos no es un array');
         rotulosCatalog = data.map(item => ({
           ...item,
           terraza_id: Number(item.terraza_id),
           _search_blob: normalizeText([
-            item.label_busqueda,
-            item.rotulo_formateado,
-            item.rotulo_original,
-            item.direccion_resumen,
-            item.nombre_via,
-            item.numero_via
+            item.label_busqueda, item.rotulo_formateado, item.rotulo_original,
+            item.direccion_resumen, item.nombre_via, item.numero_via
           ].filter(Boolean).join(' '))
         })).filter(item => Number.isFinite(item.terraza_id));
       } catch (err) {
@@ -1719,26 +1861,244 @@
         showStatus('No se pudo cargar el catálogo de rótulos', true);
       }
     }
-	
-	
-	
-	async function loadTerracesGeojson() {
-	  try {
-		const res = await fetch(TERRACES_GEOJSON_URL, { cache: 'no-store' });
-		if (!res.ok) throw new Error(`No se pudo leer ${TERRACES_GEOJSON_URL}`);
 
-		const data = await res.json();
-		if (!data || data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
-		  throw new Error('GeoJSON inválido');
-		}
+    async function loadTerracesGeojson() {
+      try {
+        const res = await fetch(TERRACES_GEOJSON_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`No se pudo leer ${TERRACES_GEOJSON_URL}`);
+        const data = await res.json();
+        if (!data || data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
+          throw new Error('GeoJSON inválido');
+        }
+        terracesGeojson = data;
+        buildTypeDropdownOptions();
+        renderTerracesLayer();
+      } catch (err) {
+        console.error(err);
+        showStatus('No se pudo cargar la capa de terrazas', true);
+      }
+    }
 
-		terracesGeojson = data;
-		renderTerracesLayer();
-	  } catch (err) {
-		console.error(err);
-		showStatus('No se pudo cargar la capa de terrazas', true);
+    /* ──────────────────────────────────────────────────────
+       CUSTOM TYPE DROPDOWN  (replaces native <select>)
+    ────────────────────────────────────────────────────── */
+
+
+	const TYPE_OPTION_META = {
+	  '': {
+		label: 'Todos',
+		icon: '🗂️',
+		match: []
+	  },
+
+	  'bar': {
+		label: 'Bar',
+		icon: '🍺',
+		match: ['bar']
+	  },
+
+	  'restaurante': {
+		label: 'Restaurante',
+		icon: '🍽️',
+		match: ['restaurante']
+	  },
+
+	  'cafeteria': {
+		label: 'Cafetería',
+		icon: '☕',
+		match: ['cafeteria']
+	  },
+
+	  'cerveceria / taberna': {
+		label: 'Cervecería',
+		icon: '🍻',
+		match: ['cerveceria', 'taberna']
+	  },
+
+	  'comida rapida': {
+		label: 'Fast food',
+		icon: '🌮',
+		match: ['comida rapida', 'fast food']
+	  },
+
+	  'heladeria / dulces': {
+		label: 'Heladería',
+		icon: '🍦',
+		match: ['heladeria', 'dulces']
 	  }
+	};
+
+
+
+
+
+
+
+
+
+    function buildTypeDropdownOptions() {
+	  if (!terracesGeojson?.features?.length || !typeFilterDropdown) return;
+
+	  const existingValues = new Set();
+
+	  for (const feature of terracesGeojson.features) {
+		const activity = normalizeActivityType(feature?.properties?.tipo_actividad);
+		if (activity && activity !== 'hosteleria otros') {
+		  existingValues.add(activity);
+		}
+	  }
+
+	  const preferredOrder = [
+		'',
+		'bar',
+		'restaurante',
+		'cafeteria',
+		'cerveceria / taberna',
+		'comida rapida',
+		'heladeria / dulces'
+	  ];
+
+	  const visibleOptions = preferredOrder.filter(value => {
+		if (value === '') return true;
+
+		const meta = TYPE_OPTION_META[value];
+		if (!meta?.match) return false;
+
+		return Array.from(existingValues).some(activity =>
+		  meta.match.some(m => activity.includes(m))
+		);
+	  });
+
+	  typeFilterDropdown.innerHTML = visibleOptions.map(value => {
+		const meta = TYPE_OPTION_META[value] || {
+		  label: formatActivityLabel(value),
+		  icon: '📍'
+		};
+
+		return `
+		  <div
+			class="type-option${value === activityTypeFilter ? ' selected' : ''}"
+			role="option"
+			aria-selected="${value === activityTypeFilter}"
+			data-value="${escapeHtml(value)}"
+		  >
+			<svg class="type-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			  <polyline points="20 6 9 17 4 12"/>
+			</svg>
+			<span class="type-option-icon" aria-hidden="true">${meta.icon}</span>
+			<span>${escapeHtml(meta.label)}</span>
+		  </div>
+		`;
+	  }).join('');
+
+	  typeFilterDropdown.querySelectorAll('.type-option').forEach(el => {
+		el.addEventListener('click', () => {
+		  selectTypeOption(el.dataset.value);
+		});
+	  });
 	}
+
+    function selectTypeOption(value) {
+	  activityTypeFilter = value || '';
+
+	  const meta = TYPE_OPTION_META[activityTypeFilter] || { label: 'Todos' };
+	  typeBtnLabelText.textContent = meta.label || 'Todos';
+
+	  typeFilterBtn.classList.toggle('has-value', !!activityTypeFilter);
+
+	  typeFilterDropdown.querySelectorAll('.type-option').forEach(el => {
+		const isSelected = el.dataset.value === activityTypeFilter;
+		el.classList.toggle('selected', isSelected);
+		el.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+	  });
+
+	  closeTypeDropdown();
+	  renderTerracesLayer();
+	}
+
+    function openTypeDropdown() {
+      typeFilterDropdown.classList.add('open');
+      typeFilterBtn.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeTypeDropdown() {
+      typeFilterDropdown.classList.remove('open');
+      typeFilterBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    typeFilterBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      typeFilterDropdown.classList.contains('open') ? closeTypeDropdown() : openTypeDropdown();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.type-filter-wrap')) closeTypeDropdown();
+      if (!e.target.closest('#search-wrap')) closeAC();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeTypeDropdown();
+    });
+
+    function formatActivityLabel(value) {
+      const map = {
+        'bar': 'Bar', 'restaurante': 'Restaurante', 'cafeteria': 'Cafetería',
+        'cerveceria / taberna': 'Cervecería', 'comida rapida': 'Fast food',
+        'heladeria / dulces': 'Heladería'
+      };
+      return map[value] || (value.charAt(0).toUpperCase() + value.slice(1));
+    }
+
+    /* ──────────────────────────────────────────────────────
+       GEOLOCATION BUTTON
+    ────────────────────────────────────────────────────── */
+
+    let userLocationMarker = null;
+
+    locateBtn?.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        showStatus('Geolocalización no disponible en este dispositivo', true);
+        return;
+      }
+
+      locateBtn.classList.add('locating');
+      showStatus('Obteniendo ubicación…', false, true);
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude: lat, longitude: lng } = pos.coords;
+
+          locateBtn.classList.remove('locating');
+          hideStatus();
+
+          if (userLocationMarker) map.removeLayer(userLocationMarker);
+
+          userLocationMarker = L.circleMarker([lat, lng], {
+            radius: 8,
+            color: '#ffffff',
+            weight: 2.5,
+            fillColor: '#005ea8',
+            fillOpacity: 1,
+          }).addTo(map);
+
+          map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 0.6 });
+        },
+        (err) => {
+          locateBtn.classList.remove('locating');
+          const msgs = {
+            1: 'Permiso de ubicación denegado',
+            2: 'No se pudo obtener la ubicación',
+            3: 'Tiempo de espera agotado',
+          };
+          showStatus(msgs[err.code] || 'Error de geolocalización', true);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      );
+    });
+
+    /* ──────────────────────────────────────────────────────
+       AUTOCOMPLETE
+    ────────────────────────────────────────────────────── */
 
     function getItemDisplayLabel(item) {
       return item.label_busqueda || item.rotulo_formateado || item.rotulo_original || `Terraza ${item.terraza_id}`;
@@ -1755,17 +2115,13 @@
       currentSuggestions = items;
       selectedSuggIdx = -1;
 
-      if (!items.length) {
-        closeAC();
-        return;
-      }
+      if (!items.length) { closeAC(); return; }
 
       acList.innerHTML = items.map((item, index) => {
         const title = escapeHtml(getItemDisplayLabel(item));
         const subtitle = item.direccion_resumen
           ? escapeHtml(item.direccion_resumen)
           : escapeHtml(item.nombre_via || '');
-
         return `
           <div class="ac-item" role="option" data-idx="${index}">
             <div class="ac-pin">
@@ -1784,14 +2140,8 @@
       acList.classList.add('open');
 
       acList.querySelectorAll('.ac-item').forEach(el => {
-        el.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          selectSuggestion(Number(el.dataset.idx));
-        });
-        el.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          selectSuggestion(Number(el.dataset.idx));
-        });
+        el.addEventListener('mousedown', (e) => { e.preventDefault(); selectSuggestion(Number(el.dataset.idx)); });
+        el.addEventListener('touchend', (e) => { e.preventDefault(); selectSuggestion(Number(el.dataset.idx)); });
       });
     }
 
@@ -1804,191 +2154,136 @@
     function searchCatalog(query) {
       const q = normalizeText(query);
       if (!q) return [];
-
-      const starts = [];
-      const contains = [];
-
+      const starts = [], contains = [];
       for (const item of rotulosCatalog) {
         if (!item._search_blob.includes(q)) continue;
-
         const label = normalizeText(getItemDisplayLabel(item));
-        if (label.startsWith(q)) {
-          starts.push(item);
-        } else {
-          contains.push(item);
-        }
+        label.startsWith(q) ? starts.push(item) : contains.push(item);
       }
-
       return [...starts, ...contains].slice(0, 12);
     }
 
     function selectSuggestion(index) {
-	  const item = currentSuggestions[index];
-	  if (!item) return;
+      const item = currentSuggestions[index];
+      if (!item) return;
 
-	  const feature = findTerraceFeatureById(item.terraza_id);
+      const feature = findTerraceFeatureById(item.terraza_id);
+      if (feature) { selectTerraceFeature(feature); return; }
 
-	  if (feature) {
-		selectTerraceFeature(feature);
-		return;
-	  }
+      selectedTerraceId = item.terraza_id;
+      selectedRotulo = getItemDisplayLabel(item);
+      searchInput.value = selectedRotulo;
+      searchClear.classList.add('visible');
+      closeAC();
+      searchInput.blur();
+      document.activeElement?.blur();
 
-	  selectedTerraceId = item.terraza_id;
-	  selectedRotulo = getItemDisplayLabel(item);
-	  searchInput.value = selectedRotulo;
-	  searchClear.classList.add('visible');
-	  closeAC();
-	  searchInput.blur();
-	  document.activeElement?.blur();
+      placeName.textContent = selectedRotulo;
+      placeName.classList.remove('empty');
 
-	  placeName.textContent = selectedRotulo;
-	  placeName.classList.remove('empty');
+      setSheetState('mid');
+      scheduleLoad();
+    }
 
-	  if (isMobileLayout()) {
-		setSheetState('mid');
-	  } else {
-		setSheetState('mid');
-	  }
-	  
-	  scheduleLoad();
-	}
-	
-	
-	function createTerraceMarker(isSelected = false) {
-	  return L.circleMarker([0, 0], {
-		radius: isSelected ? 7 : 5,
-		color: '#ffffff',
-		weight: 2,
-		fillColor: isSelected ? '#0f3d68' : '#005ea8',
-		fillOpacity: 0.95
-	  });
-	}
-	
-	
-	
-	function getShadowPctForTerrace(terraceId) {
-	  const raw = shadowByTerraceId.get(Number(terraceId));
-	  if (raw === null || raw === undefined) return null;
-	  const n = Number(raw);
-	  if (!Number.isFinite(n)) return null;
-	  return n <= 1 ? n * 100 : n;
-	}
+    function getShadowPctForTerrace(terraceId) {
+      const raw = shadowByTerraceId.get(Number(terraceId));
+      if (raw === null || raw === undefined) return null;
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return null;
+      return n <= 1 ? n * 100 : n;
+    }
 
-	function getSunBucketFromShadowPct(pct) {
-	  if (pct === null) return 3; // sin dato = mucho sol
-	  if (pct >= 75) return 0;    // mucha sombra
-	  if (pct >= 50) return 1;
-	  if (pct >= 25) return 2;
-	  return 3;                   // poco sombra = mucho sol
-	}
+    function getSunBucketFromShadowPct(pct) {
+      if (pct === null) return 0;
+      if (pct >= 75) return 0;
+      if (pct >= 50) return 1;
+      if (pct >= 25) return 2;
+      return 3;
+    }
 
-	function getMarkerFillColor(feature) {
-	  const terraceId = Number(feature?.properties?.id_terraza);
+    function getMarkerFillColor(feature) {
+      const terraceId = Number(feature?.properties?.id_terraza);
+      if (!isMobileLayout()) {
+        return (selectedTerraceId !== null && terraceId === Number(selectedTerraceId))
+          ? '#0f3d68' : '#005ea8';
+      }
+      const pct = getShadowPctForTerrace(terraceId);
+      const bucket = getSunBucketFromShadowPct(pct);
+      if (bucket === 0) return '#2f6fb3';
+      if (bucket === 1) return '#6fa8dc';
+      if (bucket === 2) return '#f4b942';
+      return '#d8572a';
+    }
 
-	  if (!isMobileLayout()) {
-		const isSelected =
-		  selectedTerraceId !== null &&
-		  terraceId === Number(selectedTerraceId);
-		return isSelected ? '#0f3d68' : '#005ea8';
-	  }
+    function renderTerracesLayer() {
+      if (!terracesGeojson) return;
 
-	  const pct = getShadowPctForTerrace(terraceId);
-	  const bucket = getSunBucketFromShadowPct(pct);
+      if (terracesLayer) { map.removeLayer(terracesLayer); terracesLayer = null; }
 
-	  if (bucket === 0) return '#2f6fb3'; // más sombra
-	  if (bucket === 1) return '#6fa8dc';
-	  if (bucket === 2) return '#f4b942';
-	  return '#2f6fb3'; // más sol
-	}
+      const filteredFeatures = terracesGeojson.features.filter(feature => {
+        if (!isMobileLayout()) return true;
+        const passesGreen = !greenFilterActive || Number(feature?.properties?.tiene_zona_ajardinada) === 1;
+        const passesType = matchesActivityType(feature, activityTypeFilter);
+        return passesGreen && passesType;
+      });
 
-	function renderTerracesLayer() {
-	  if (!terracesGeojson) return;
+      terracesLayer = L.geoJSON(
+        { ...terracesGeojson, features: filteredFeatures },
+        {
+          pointToLayer: (feature, latlng) => {
+            const terraceId = Number(feature?.properties?.id_terraza);
+            const isSelected = selectedTerraceId !== null && terraceId === Number(selectedTerraceId);
+            return L.circleMarker(latlng, {
+              radius: isSelected ? 7 : 5,
+              color: '#ffffff',
+              weight: 2,
+              fillColor: getMarkerFillColor(feature),
+              fillOpacity: isSelected ? 1 : 0.92
+            });
+          },
+          onEachFeature: (feature, layer) => {
+            layer.on('click', () => selectTerraceFeature(feature));
+          }
+        }
+      ).addTo(map);
+    }
 
-	  if (terracesLayer) {
-		map.removeLayer(terracesLayer);
-		terracesLayer = null;
-	  }
+    function findTerraceFeatureById(terraceId) {
+      if (!terracesGeojson?.features?.length) return null;
+      return terracesGeojson.features.find(f => Number(f?.properties?.id_terraza) === Number(terraceId)) || null;
+    }
 
-	  const filteredFeatures = terracesGeojson.features.filter(feature => {
-		if (!isMobileLayout()) return true;
-		if (!greenFilterActive) return true;
-		return Number(feature?.properties?.tiene_zona_ajardinada) === 1;
-	  });
+    function selectTerraceFeature(feature) {
+      if (!feature?.properties) return;
+      const terraceId = Number(feature.properties.id_terraza);
+      if (!Number.isFinite(terraceId)) return;
 
-	  terracesLayer = L.geoJSON(
-		{
-		  ...terracesGeojson,
-		  features: filteredFeatures
-		},
-		{
-		  pointToLayer: (feature, latlng) => {
-			const terraceId = Number(feature?.properties?.id_terraza);
-			const isSelected =
-			  selectedTerraceId !== null &&
-			  terraceId === Number(selectedTerraceId);
+      selectedTerraceFeature = feature;
+      selectedTerraceId = terraceId;
+      selectedRotulo = safeText(feature.properties.rotulo);
 
-			return L.circleMarker(latlng, {
-			  radius: isSelected ? 7 : 5,
-			  color: '#ffffff',
-			  weight: 2,
-			  fillColor: getMarkerFillColor(feature),
-			  fillOpacity: isSelected ? 1 : 0.92
-			});
-		  },
-		  onEachFeature: (feature, layer) => {
-			layer.on('click', () => {
-			  selectTerraceFeature(feature);
-			});
-		  }
-		}
-	  ).addTo(map);
-	}
-	
-	
-	function findTerraceFeatureById(terraceId) {
-	  if (!terracesGeojson?.features?.length) return null;
-	  return terracesGeojson.features.find(
-		f => Number(f?.properties?.id_terraza) === Number(terraceId)
-	  ) || null;
-	}
+      searchInput.value = selectedRotulo;
+      searchClear.classList.add('visible');
+      closeAC();
+      searchInput.blur();
+      document.activeElement?.blur();
 
-	function selectTerraceFeature(feature) {
-	  if (!feature?.properties) return;
+      placeName.textContent = selectedRotulo;
+      placeName.classList.remove('empty');
 
-	  const terraceId = Number(feature.properties.id_terraza);
-	  if (!Number.isFinite(terraceId)) return;
+      renderTerraceInfo(feature);
+      renderTerracesLayer();
 
-	  selectedTerraceFeature = feature;
-	  selectedTerraceId = terraceId;
-	  selectedRotulo = safeText(feature.properties.rotulo);
+      if (feature.geometry?.type === 'Point' && Array.isArray(feature.geometry.coordinates)) {
+        const [lon, lat] = feature.geometry.coordinates;
+        if (Number.isFinite(lon) && Number.isFinite(lat)) {
+          map.flyTo([lat, lon], Math.max(map.getZoom(), 17), { duration: 0.5 });
+        }
+      }
 
-	  searchInput.value = selectedRotulo;
-	  searchClear.classList.add('visible');
-	  closeAC();
-	  searchInput.blur();
-	  document.activeElement?.blur();
-
-	  placeName.textContent = selectedRotulo;
-	  placeName.classList.remove('empty');
-
-	  renderTerraceInfo(feature);
-	  renderTerracesLayer();
-
-	  if (feature.geometry?.type === 'Point' && Array.isArray(feature.geometry.coordinates)) {
-		const [lon, lat] = feature.geometry.coordinates;
-		if (Number.isFinite(lon) && Number.isFinite(lat)) {
-		  map.flyTo([lat, lon], Math.max(map.getZoom(), 17), { duration: 0.5 });
-		}
-	  }
-
-	  if (isMobileLayout()) {
-		setSheetState('mid');
-	  } else {
-		setSheetState('mid');
-	  }
-	  
-	  scheduleLoad();
-	}
+      setSheetState('mid');
+      scheduleLoad();
+    }
 
     async function initDuckDB() {
       try {
@@ -1996,10 +2291,7 @@
 
         const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
         const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
-
-        if (!bundle) {
-          throw new Error('No se pudo seleccionar un bundle de DuckDB-Wasm');
-        }
+        if (!bundle) throw new Error('No se pudo seleccionar un bundle de DuckDB-Wasm');
 
         const workerUrl = URL.createObjectURL(
           new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
@@ -2010,7 +2302,6 @@
 
         db = new duckdb.AsyncDuckDB(logger, worker);
         await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-
         URL.revokeObjectURL(workerUrl);
 
         conn = await db.connect();
@@ -2026,46 +2317,22 @@
 
     async function ensureWeekRegistered(dateString) {
       if (!db) throw new Error('DuckDB no está inicializado');
-
       const alias = buildWeekAlias(dateString);
       const url = buildWeekUrl(dateString);
-
-      if (registeredWeekAliases.has(alias)) {
-        return { alias, url };
-      }
-
-      await db.registerFileURL(
-        alias,
-        url,
-        duckdb.DuckDBDataProtocol.HTTP,
-        true
-      );
-
+      if (registeredWeekAliases.has(alias)) return { alias, url };
+      await db.registerFileURL(alias, url, duckdb.DuckDBDataProtocol.HTTP, true);
       registeredWeekAliases.add(alias);
       return { alias, url };
     }
 
     function buildDailyQuery(alias, terraceId, selectedDate, selectedHour) {
       const representativeDate = getRepresentativeWednesdayDateForSelectedWeek(selectedDate);
-
       return `
-        SELECT
-          terraza_id,
-          rotulo,
-          datetime,
-          date,
-          shadow_area_m2,
-          shadow_pct,
-          terrace_area_m2,
-          building_id,
-          geometry
+        SELECT terraza_id, rotulo, datetime, date, shadow_area_m2, shadow_pct,
+               terrace_area_m2, building_id, geometry
         FROM read_parquet('${alias}')
         WHERE terraza_id = ${Number(terraceId)}
-          AND substr(
-            coalesce(cast(date as varchar), cast(datetime as varchar)),
-            1,
-            10
-          ) = '${representativeDate}'
+          AND substr(coalesce(cast(date as varchar), cast(datetime as varchar)), 1, 10) = '${representativeDate}'
           AND EXTRACT(HOUR FROM datetime) = ${Number(selectedHour)}
         ORDER BY datetime
       `;
@@ -2073,125 +2340,93 @@
 
     function getFitPadding() {
       if (isMobileLayout()) {
-        return {
-          paddingTopLeft: [24, 110],
-          paddingBottomRight: [24, 320]
-        };
+        return { paddingTopLeft: [24, 110], paddingBottomRight: [24, 320] };
       }
-
-      return {
-        paddingTopLeft: [400, 40],
-        paddingBottomRight: [40, 40]
-      };
+      return { paddingTopLeft: [400, 40], paddingBottomRight: [40, 40] };
     }
 
     async function loadSelection() {
-	  if (!db || !conn) {
-		showStatus('DuckDB-Wasm aún no está cargado', true);
-		return;
-	  }
+      if (!db || !conn) { showStatus('DuckDB-Wasm aún no está cargado', true); return; }
+      if (!selectedTerraceId) return;
 
-	  if (!selectedTerraceId) {
-		return;
-	  }
+      const selectedDate = dateInput.value;
+      const selectedHour = Number(hourSlider.value);
 
-	  const selectedDate = dateInput.value;
-	  const selectedHour = Number(hourSlider.value);
+      if (!selectedDate) { showStatus('Selecciona una fecha', true); return; }
+      if (selectedDate < MIN_DATE || selectedDate > MAX_DATE) {
+        showStatus(`La fecha debe estar entre ${MIN_DATE} y ${MAX_DATE}`, true);
+        return;
+      }
 
-	  if (!selectedDate) {
-		showStatus('Selecciona una fecha', true);
-		return;
-	  }
+      try {
+        showStatus('Consultando datos…', false, true);
+        noResult.style.display = 'none';
 
-	  if (selectedDate < MIN_DATE || selectedDate > MAX_DATE) {
-		showStatus(`La fecha debe estar entre ${MIN_DATE} y ${MAX_DATE}`, true);
-		return;
-	  }
+        const { alias } = await ensureWeekRegistered(selectedDate);
+        const sql = buildDailyQuery(alias, selectedTerraceId, selectedDate, selectedHour);
+        const result = await conn.query(sql);
+        const rows = await arrowTableToRows(result);
 
-	  try {
-		showStatus('Consultando datos…', false, true);
-		noResult.style.display = 'none';
+        currentDayFeatures = rows.map((row, i) => {
+          try { return rowToFeature(row, i); }
+          catch (err) { console.error(err); return null; }
+        }).filter(Boolean);
 
-		const { alias } = await ensureWeekRegistered(selectedDate);
-		const sql = buildDailyQuery(alias, selectedTerraceId, selectedDate, selectedHour);
+        clearLayer();
 
-		const result = await conn.query(sql);
-		const rows = await arrowTableToRows(result);
+        if (!currentDayFeatures.length) {
+          resetSummary();
+          noResult.style.display = 'block';
+          hideStatus();
+          return;
+        }
 
-		currentDayFeatures = rows.map((row, i) => {
-		  try {
-			return rowToFeature(row, i);
-		  } catch (err) {
-			console.error(err);
-			return null;
-		  }
-		}).filter(Boolean);
+        currentLayer = L.geoJSON(currentDayFeatures, {
+          style: () => ({
+            color: '#24374d',
+            weight: 2.4,
+            fillColor: '#40566f',
+            fillOpacity: 0.42,
+            dashArray: '6 4',
+            lineJoin: 'round'
+          })
+        }).addTo(map);
 
-		clearLayer();
+        try {
+          const bounds = currentLayer.getBounds();
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { ...getFitPadding(), maxZoom: FIT_BOUNDS_MAX_ZOOM });
+          }
+        } catch (err) { console.error(err); }
 
-		if (!currentDayFeatures.length) {
-		  resetSummary();
-		  noResult.style.display = 'block';
-		  hideStatus();
-		  return;
-		}
+        const raw = currentDayFeatures[0].properties.shadow_pct;
+        const pct = raw !== null && raw !== undefined ? (raw <= 1 ? raw * 100 : raw) : null;
+        updateRing(pct);
 
-		currentLayer = L.geoJSON(currentDayFeatures, {
-		  style: () => ({
-			color: '#24374d',
-			weight: 2.4,
-			fillColor: '#40566f',
-			fillOpacity: 0.42,
-			dashArray: '6 4',
-			lineJoin: 'round'
-		  }),
-		  onEachFeature: (feature, layer) => {
-			const p = feature.properties;
-		
-		  }
-		}).addTo(map);
-
-		try {
-		  const bounds = currentLayer.getBounds();
-		  if (bounds.isValid()) {
-			const fitPadding = getFitPadding();
-			map.fitBounds(bounds, {
-			  ...fitPadding,
-			  maxZoom: FIT_BOUNDS_MAX_ZOOM
-			});
-		  }
-		} catch (err) {
-		  console.error(err);
-		}
-
-		const raw = currentDayFeatures[0].properties.shadow_pct;
-		const pct = raw !== null && raw !== undefined ? (raw <= 1 ? raw * 100 : raw) : null;
-		updateRing(pct);
-
-		hideStatus();
-	  } catch (err) {
-		clearLayer();
-		currentDayFeatures = [];
-		resetSummary();
-		showStatus('Error consultando los datos', true);
-		console.error(err);
-	  }
-	}
+        hideStatus();
+      } catch (err) {
+        clearLayer();
+        currentDayFeatures = [];
+        resetSummary();
+        showStatus('Error consultando los datos', true);
+        console.error(err);
+      }
+    }
 
     function scheduleLoad() {
-	  clearTimeout(autoLoadTimeout);
-	  autoLoadTimeout = setTimeout(async () => {
-		await refreshTerraceShadowColors();
-		await loadSelection();
-	  }, 120);
-	}
+      clearTimeout(autoLoadTimeout);
+      autoLoadTimeout = setTimeout(async () => {
+        await refreshTerraceShadowColors();
+        await loadSelection();
+      }, 120);
+    }
 
+    /* ── Search input listeners ── */
     searchInput.addEventListener('input', () => {
-	  const query = searchInput.value.trim();
-	  searchClear.classList.toggle('visible', query.length > 0);
-	  renderAC(searchCatalog(query));
-	  
-	});
+      const query = searchInput.value.trim();
+      searchClear.classList.toggle('visible', query.length > 0);
+      renderAC(searchCatalog(query));
+    });
 
     searchInput.addEventListener('focus', () => {
       const query = searchInput.value.trim();
@@ -2202,35 +2437,15 @@
     searchInput.addEventListener('keydown', (e) => {
       if (!acList.classList.contains('open')) {
         if (e.key === 'Enter') {
-          const query = searchInput.value.trim();
-          const suggestions = searchCatalog(query);
-          if (suggestions.length === 1) {
-            e.preventDefault();
-            currentSuggestions = suggestions;
-            selectSuggestion(0);
-          }
+          const suggestions = searchCatalog(searchInput.value.trim());
+          if (suggestions.length === 1) { e.preventDefault(); currentSuggestions = suggestions; selectSuggestion(0); }
         }
         return;
       }
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectedSuggIdx = Math.min(selectedSuggIdx + 1, currentSuggestions.length - 1);
-        highlightAC();
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        selectedSuggIdx = Math.max(selectedSuggIdx - 1, 0);
-        highlightAC();
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (selectedSuggIdx >= 0) {
-          selectSuggestion(selectedSuggIdx);
-        } else if (currentSuggestions.length === 1) {
-          selectSuggestion(0);
-        }
-      } else if (e.key === 'Escape') {
-        closeAC();
-      }
+      if (e.key === 'ArrowDown') { e.preventDefault(); selectedSuggIdx = Math.min(selectedSuggIdx + 1, currentSuggestions.length - 1); highlightAC(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); selectedSuggIdx = Math.max(selectedSuggIdx - 1, 0); highlightAC(); }
+      else if (e.key === 'Enter') { e.preventDefault(); selectSuggestion(selectedSuggIdx >= 0 ? selectedSuggIdx : (currentSuggestions.length === 1 ? 0 : -1)); }
+      else if (e.key === 'Escape') closeAC();
     });
 
     searchInput.addEventListener('blur', () => {
@@ -2238,37 +2453,21 @@
     });
 
     searchClear.addEventListener('click', () => {
-	  searchInput.value = '';
-	  searchClear.classList.remove('visible');
-	  closeAC();
-
-	  selectedTerraceId = null;
-	  selectedRotulo = null;
-	  selectedTerraceFeature = null;
-	  placeName.textContent = 'Selecciona una terraza';
-	  placeName.classList.add('empty');
-	  terraceInfoSection.classList.add('hidden');
-
-	  renderTerracesLayer();
-	  
-	  searchInput.focus();
-	});
-
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('#search-wrap')) {
-        closeAC();
-      }
+      searchInput.value = '';
+      searchClear.classList.remove('visible');
+      closeAC();
+      selectedTerraceId = null;
+      selectedRotulo = null;
+      selectedTerraceFeature = null;
+      placeName.textContent = 'Selecciona una terraza';
+      placeName.classList.add('empty');
+      terraceInfoSection.classList.add('hidden');
+      renderTerracesLayer();
+      searchInput.focus();
     });
 
-    dateInput.addEventListener('change', () => {
-      scheduleLoad();
-    });
-
-    dateInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        loadSelection();
-      }
-    });
+    dateInput.addEventListener('change', () => scheduleLoad());
+    dateInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadSelection(); });
 
     hourSlider.addEventListener('input', () => {
       const hour = clampHour(hourSlider.value);
@@ -2276,39 +2475,27 @@
       updateHour(hour);
       scheduleLoad();
     });
-	
-	
-	
-	greenFilterToggle?.addEventListener('click', () => {
-	  greenFilterActive = !greenFilterActive;
 
-	  greenFilterToggle.classList.toggle('is-active', greenFilterActive);
-	  greenFilterToggle.setAttribute('aria-pressed', greenFilterActive ? 'true' : 'false');
+    greenFilterToggle?.addEventListener('click', () => {
+      greenFilterActive = !greenFilterActive;
+      greenFilterToggle.classList.toggle('is-active', greenFilterActive);
+      greenFilterToggle.setAttribute('aria-pressed', greenFilterActive ? 'true' : 'false');
+      renderTerracesLayer();
+    });
 
-	  renderTerracesLayer();
-	});
-    
-	
-	
-	
-	function checkDesktop() {
-	  if (window.innerWidth >= 720) desktopLabel.style.display = 'block';
-	  else desktopLabel.style.display = 'none';
-
-	  updateLegendVisibility();
-	}
-
-    function pad2(n) {
-      return String(n).padStart(2, '0');
+    function checkDesktop() {
+      if (window.innerWidth >= 720) desktopLabel.style.display = 'block';
+      else desktopLabel.style.display = 'none';
+      updateLegendVisibility();
     }
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
 
     function getInitialDateAndHour() {
       const now = new Date();
-
       let ymd = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
       if (ymd < MIN_DATE) ymd = MIN_DATE;
       if (ymd > MAX_DATE) ymd = MAX_DATE;
-
       let hour = clampHour(now.getHours());
       return { ymd, hour };
     }
@@ -2328,25 +2515,11 @@
     setSheetState('peek', false);
 
     await loadRotulosCatalog();
-	await loadTerracesGeojson();
-	await initDuckDB();
-	await refreshTerraceShadowColors();
-	renderTerracesLayer();
-	updateLegendVisibility();
+    await loadTerracesGeojson();
+    await initDuckDB();
+    await refreshTerraceShadowColors();
+    renderTerracesLayer();
+    updateLegendVisibility();
   </script>
-  
-	<div id="shadow-legend" aria-hidden="true">
-	  <div class="legend-title">Exposición al sol</div>
-	  <div class="legend-scale">
-		<span class="lg-stop shade"></span>
-		<span class="lg-stop soft"></span>
-		<span class="lg-stop warm"></span>
-		<span class="lg-stop sun"></span>
-	  </div>
-	  <div class="legend-labels">
-		<span>Más sombra</span>
-		<span>Más sol ☀️</span>
-	  </div>
-	</div>
 </body>
 </html>
