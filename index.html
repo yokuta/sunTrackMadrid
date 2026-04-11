@@ -1307,6 +1307,11 @@
       #shadow-legend { display: none; }
 
       #desktop-label { display: block !important; }
+
+		#mobile-type-dropdown-portal {
+		  display: none !important;
+		}
+
     }
 
     /* ── Shared type option styles for mobile too ── */
@@ -2304,9 +2309,12 @@
 
     function openTypeDropdown(target = 'mobile') {
 	  if (target === 'desktop') {
+		closeTypeDropdown('mobile');
 		desktopTypeDropdown?.classList.add('open');
 		desktopTypeBtn?.setAttribute('aria-expanded', 'true');
 	  } else {
+		if (window.innerWidth >= 720) return;
+		closeTypeDropdown('desktop');
 		positionMobileTypeDropdown();
 		typeFilterDropdown?.classList.add('open');
 		typeFilterBtn?.setAttribute('aria-expanded', 'true');
@@ -2779,6 +2787,10 @@
 
 	  if (desktopTypeWrap) {
 		desktopTypeWrap.style.display = isDesktop ? 'block' : 'none';
+	  }
+
+	  if (isDesktop) {
+		closeTypeDropdown('mobile');
 	  }
 
 	  updateLegendVisibility();
