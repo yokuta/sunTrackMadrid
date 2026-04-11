@@ -677,19 +677,19 @@
        SHADOW LEGEND
     ════════════════════════════════════════ */
     #shadow-legend {
-      position: fixed;
-      left: 12px;
-      bottom: calc(var(--sheet-peek) + 16px);
-      z-index: 345;
-      min-width: 170px;
-      background: rgba(255,255,255,0.95);
-      border: 1px solid var(--border-2);
-      border-radius: 16px;
-      padding: 10px 12px;
-      box-shadow: var(--shadow-md);
-      backdrop-filter: blur(10px);
-      transition: opacity 0.2s, transform 0.2s;
-    }
+	  position: fixed;
+	  right: 16px;
+	  bottom: 20px;
+	  z-index: 345;
+	  min-width: 190px;
+	  background: rgba(255,255,255,0.95);
+	  border: 1px solid var(--border-2);
+	  border-radius: 18px;
+	  padding: 12px 14px;
+	  box-shadow: var(--shadow-md);
+	  backdrop-filter: blur(10px);
+	  transition: opacity 0.2s, transform 0.2s;
+	}
 
     #shadow-legend.hidden {
       opacity: 0;
@@ -698,40 +698,41 @@
     }
 
     .legend-title {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
+	  font-size: 11px;
+	  font-weight: 700;
+	  text-transform: uppercase;
+	  letter-spacing: 0.06em;
+	  color: var(--muted);
+	  margin-bottom: 8px;
+	}
 
-    .legend-scale {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      margin-bottom: 6px;
-    }
+	.legend-scale {
+	  display: grid;
+	  grid-template-columns: repeat(4, 1fr);
+	  gap: 8px;
+	  margin-bottom: 8px;
+	}
 
-    .lg-stop {
-      height: 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.75);
-    }
+	.lg-stop {
+	  height: 14px;
+	  border-radius: 999px;
+	  border: 1px solid rgba(255,255,255,0.75);
+	}
+
+	.legend-labels {
+	  display: flex;
+	  justify-content: space-between;
+	  gap: 10px;
+	  font-size: 11px;
+	  color: var(--muted);
+	}
 
     .lg-stop.shade { background: #2f6fb3; }
     .lg-stop.soft  { background: #6fa8dc; }
     .lg-stop.warm  { background: #f4b942; }
     .lg-stop.sun   { background: #d8572a; }
 
-    .legend-labels {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 10px;
-      color: var(--muted);
-    }
-
+   
     .sheet-top-label {
       font-size: 11px;
       font-weight: 700;
@@ -1318,7 +1319,7 @@
       /* Hide mobile-only elements on desktop */
       #mobile-filters-bar { display: none !important; }
       #ranking-link, #locate-btn, #info-link { display: none !important; }
-      #shadow-legend { display: none; }
+      
 
       #desktop-label { display: block !important; }
 
@@ -1737,10 +1738,15 @@
     }
 
     function updateLegendVisibility() {
-      if (!shadowLegend) return;
-      const shouldShow = isMobileLayout() && sheetState === 'peek';
-      shadowLegend.classList.toggle('hidden', !shouldShow);
-    }
+	  if (!shadowLegend) return;
+
+	  if (isMobileLayout()) {
+		const shouldShow = sheetState === 'peek';
+		shadowLegend.classList.toggle('hidden', !shouldShow);
+	  } else {
+		shadowLegend.classList.remove('hidden');
+	  }
+	}
 
     function setSheetState(state, animate = true) {
       sheetState = state;
