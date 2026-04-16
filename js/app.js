@@ -1450,8 +1450,6 @@ document.getElementById('mobile-filters-bar')?.addEventListener('scroll', () => 
    BOOT — Initialize everything in dependency order
    ============================================================ */
 (async () => {
-  showBootLoader('Cargando datos…');
-
   try {
     const { ymd, hour } = getInitialDateAndHour();
     dateInput.value  = ymd;
@@ -1475,6 +1473,6 @@ document.getElementById('mobile-filters-bar')?.addEventListener('scroll', () => 
   } catch (err) {
     console.error('Boot error:', err);
   } finally {
-    hideBootLoader();
+    hideStatus();
   }
 })();

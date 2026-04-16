@@ -649,7 +649,9 @@ input[type=range]::-moz-range-thumb {
   transition: opacity 0.25s, bottom 0.42s var(--transition);
 }
 
-#status-pill.visible { opacity: 1; }
+#status-pill.visible {
+  opacity: 1;
+}
 #status-pill.error   { background: #a61d24; }
 
 .spinner {
