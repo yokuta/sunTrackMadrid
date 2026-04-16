@@ -676,26 +676,30 @@
     /* ════════════════════════════════════════
        SHADOW LEGEND
     ════════════════════════════════════════ */
-    #shadow-legend {
+   #shadow-legend {
 	  position: fixed;
-	  right: 16px;
-	  bottom: 20px;
+	  right: 12px;
+	  left: auto;
+	  bottom: calc(var(--sheet-peek) + 14px);
 	  z-index: 345;
-	  min-width: 190px;
+	  min-width: 170px;
 	  background: rgba(255,255,255,0.95);
 	  border: 1px solid var(--border-2);
-	  border-radius: 18px;
-	  padding: 12px 14px;
+	  border-radius: 16px;
+	  padding: 10px 12px;
 	  box-shadow: var(--shadow-md);
 	  backdrop-filter: blur(10px);
-	  transition: opacity 0.2s, transform 0.2s;
+	  transition:
+		opacity 0.2s,
+		transform 0.2s,
+		bottom 0.42s var(--transition);
 	}
 
-    #shadow-legend.hidden {
-      opacity: 0;
-      transform: translateY(6px);
-      pointer-events: none;
-    }
+	#shadow-legend.hidden {
+	  opacity: 0;
+	  transform: translateY(6px);
+	  pointer-events: none;
+	}
 
     .legend-title {
 	  font-size: 11px;
@@ -1386,7 +1390,7 @@
         <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input id="rotuloSearchInput" type="text" placeholder="Busca por bar…" autocomplete="off" autocorrect="off" spellcheck="false" />
+        <input id="rotuloSearchInput" type="text" placeholder="Busca por bar o dirección…" autocomplete="off" autocorrect="off" spellcheck="false" />
         <button id="search-clear" aria-label="Borrar búsqueda">×</button>
       </div>
 
@@ -1599,6 +1603,7 @@
     const FILE_BASENAME = 'terrace_shadows';
     const FILE_SUFFIX = '.parquet';
     const ROTULOS_JSON_URL = './rotulos_terrazas_index.json';
+	const ADDRESS_GEOJSON_URL = './numeracionCallesMadrid_light.geojson';
     const TERRACES_GEOJSON_URL = './terrazas.geojson';
     const MIN_DATE = '2026-01-01';
     const MAX_DATE = '2026-12-31';
@@ -1631,6 +1636,9 @@
     let userLocationData = null;
     let userLocationMarker = null;
     let userLocationHalo = null;
+	
+	let addressCatalog = [];
+	let searchAddressMarker = null;
 
     /* ── DOM References ── */
     const searchInput    = document.getElementById('rotuloSearchInput');
@@ -1728,6 +1736,45 @@
       if (!txt || txt === 'sin clasificar' || txt === 'no hosteleria') return '';
       return txt;
     }
+	
+	function getSheetHeightForState(state) {
+	  if (state === 'peek') return peekH();
+	  if (state === 'mid') return midH();
+	  return fullH();
+	}
+
+	function getDraggingSheetHeight() {
+	  const startHeight = getSheetHeightForState(dragStartState);
+	  const targetHeight = Math.max(peekH(), Math.min(fullH(), startHeight + dragDelta));
+	  return targetHeight;
+	}
+
+	function updateLegendVisibility() {
+	  if (!shadowLegend) return;
+
+	  const shouldShow = isMobileLayout() && sheetState === 'peek' && !isDragging;
+	  shadowLegend.classList.toggle('hidden', !shouldShow);
+	}
+
+	function updateLegendPosition() {
+	  if (!shadowLegend) return;
+
+	  if (!isMobileLayout()) {
+		shadowLegend.style.bottom = '';
+		return;
+	  }
+
+	  const margin = 14;
+
+	  if (isDragging) {
+		const dragHeight = getDraggingSheetHeight();
+		shadowLegend.style.bottom = `${Math.round(dragHeight + margin)}px`;
+		return;
+	  }
+
+	  const currentHeight = getSheetHeightForState(sheetState);
+	  shadowLegend.style.bottom = `${Math.round(currentHeight + margin)}px`;
+	}
 
     function matchesActivityType(feature, selectedType) {
       if (!selectedType) return true;
@@ -1737,44 +1784,64 @@
       return meta.match.some(m => activity.includes(m));
     }
 
-    function updateLegendVisibility() {
-	  if (!shadowLegend) return;
 
-	  if (isMobileLayout()) {
-		const shouldShow = sheetState === 'peek';
-		shadowLegend.classList.toggle('hidden', !shouldShow);
-	  } else {
-		shadowLegend.classList.remove('hidden');
-	  }
-	}
+
+   
 
     function setSheetState(state, animate = true) {
-      sheetState = state;
-      if (!animate) sheet.style.transition = 'none';
-      sheet.dataset.state = state;
-      if (!animate) setTimeout(() => { sheet.style.transition = ''; }, 50);
-      const h = state === 'peek' ? peekH() : state === 'mid' ? midH() : fullH();
-      statusPill.style.bottom = (h + 12) + 'px';
-      updateLegendVisibility();
-    }
+	  sheetState = state;
 
-    function onDragStart(clientY) { isDragging = true; dragStartY = clientY; dragStartState = sheetState; dragDelta = 0; sheet.style.transition = 'none'; }
-    function onDragMove(clientY) { if (!isDragging) return; dragDelta = dragStartY - clientY; }
-    function onDragEnd() {
-      if (!isDragging) return;
-      isDragging = false;
-      sheet.style.transition = '';
-      const threshold = 60;
-      if (dragStartState === 'peek') {
-        setSheetState(dragDelta > threshold ? 'mid' : 'peek');
-      } else if (dragStartState === 'mid') {
-        if (dragDelta > threshold) setSheetState('full');
-        else if (dragDelta < -threshold) setSheetState('peek');
-        else setSheetState('mid');
-      } else {
-        setSheetState(dragDelta < -threshold ? 'mid' : 'full');
-      }
-    }
+	  if (!animate) sheet.style.transition = 'none';
+	  sheet.dataset.state = state;
+
+	  if (!animate) {
+		setTimeout(() => { sheet.style.transition = ''; }, 50);
+	  }
+
+	  const h = getSheetHeightForState(state);
+	  statusPill.style.bottom = (h + 12) + 'px';
+
+	  updateLegendPosition();
+	  updateLegendVisibility();
+	}
+
+    function onDragStart(clientY) {
+	  isDragging = true;
+	  dragStartY = clientY;
+	  dragStartState = sheetState;
+	  dragDelta = 0;
+	  sheet.style.transition = 'none';
+	  updateLegendPosition();
+	  updateLegendVisibility();
+	}
+
+	function onDragMove(clientY) {
+	  if (!isDragging) return;
+	  dragDelta = dragStartY - clientY;
+	  updateLegendPosition();
+	}
+
+	function onDragEnd() {
+	  if (!isDragging) return;
+
+	  isDragging = false;
+	  sheet.style.transition = '';
+
+	  const threshold = 60;
+
+	  if (dragStartState === 'peek') {
+		setSheetState(dragDelta > threshold ? 'mid' : 'peek');
+	  } else if (dragStartState === 'mid') {
+		if (dragDelta > threshold) setSheetState('full');
+		else if (dragDelta < -threshold) setSheetState('peek');
+		else setSheetState('mid');
+	  } else {
+		setSheetState(dragDelta < -threshold ? 'mid' : 'full');
+	  }
+
+	  updateLegendPosition();
+	  updateLegendVisibility();
+	}
 
     handleArea.addEventListener('touchstart', e => { onDragStart(e.touches[0].clientY); }, { passive: true });
     handleArea.addEventListener('touchmove', e => { onDragMove(e.touches[0].clientY); }, { passive: true });
@@ -1839,13 +1906,10 @@
        USER LOCATION — PERSISTENCE
     ════════════════════════════════════════ */
     function saveUserLocation(lat, lng) {
-      const data = { lat, lng, timestamp: new Date().toISOString() };
-      try {
-        localStorage.setItem(USER_LOC_STORAGE_KEY, JSON.stringify(data));
-      } catch (e) { /* localStorage might be unavailable */ }
-      userLocationData = data;
-      updateExportBtnVisibility();
-    }
+	  const data = { lat, lng, timestamp: new Date().toISOString() };
+	  userLocationData = data;
+	  updateExportBtnVisibility();
+	}
 
     function loadSavedUserLocation() {
       try {
@@ -1949,15 +2013,43 @@
 
     fabLocate?.addEventListener('click', handleLocate);
 
-    /* Restore saved location on load */
-    function restoreSavedLocation() {
-      const saved = loadSavedUserLocation();
-      if (!saved) return;
-      userLocationData = saved;
-      showUserLocationMarker(saved.lat, saved.lng);
-      updateExportBtnVisibility();
-    }
 
+	async function centerMapByApproxLocation() {
+	  const madridCenter = [40.4168, -3.7038];
+
+	  const ZOOM_MADRID_FALLBACK = 15;   // cuando NO está en Madrid
+	  const ZOOM_IP = 13;                // cuando SÍ está (más abierto)
+
+	  try {
+		const res = await fetch('https://ipapi.co/json/');
+		if (!res.ok) throw new Error('No se pudo obtener ubicación aproximada');
+
+		const data = await res.json();
+		const lat = Number(data.latitude);
+		const lon = Number(data.longitude);
+
+		// Si falla lat/lon → fallback directo
+		if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+		  map.setView(madridCenter, ZOOM_MADRID_FALLBACK, { animate: false });
+		  return;
+		}
+
+		const approxPoint = L.latLng(lat, lon);
+
+		// Si está fuera de Madrid → centro Madrid con zoom 15
+		if (!MADRID_BOUNDS.pad(0.8).contains(approxPoint)) {
+		  map.setView(madridCenter, ZOOM_MADRID_FALLBACK, { animate: false });
+		  return;
+		}
+
+		// Si está dentro → centramos en su zona aproximada
+		map.setView([lat, lon], ZOOM_IP, { animate: false });
+
+	  } catch (err) {
+		console.warn('Fallback Madrid centro:', err);
+		map.setView(madridCenter, ZOOM_MADRID_FALLBACK, { animate: false });
+	  }
+	}
 
 
     /* ════════════════════════════════════════
@@ -2200,7 +2292,88 @@
       const arr = table.toArray ? table.toArray() : [];
       return arr.map(normalizeDuckRow);
     }
+	
+	
+	
+	async function loadAddressCatalog() {
+	  try {
+		const res = await fetch(ADDRESS_GEOJSON_URL, { cache: 'no-store' });
+		if (!res.ok) throw new Error(`No se pudo leer ${ADDRESS_GEOJSON_URL}`);
+		const data = await res.json();
 
+		if (!data || data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
+		  throw new Error('GeoJSON de direcciones inválido');
+		}
+
+		addressCatalog = data.features.map((feature, idx) => {
+		  const props = feature?.properties || {};
+		  const coords = feature?.geometry?.coordinates;
+
+		  if (
+			!Array.isArray(coords) ||
+			coords.length < 2 ||
+			!Number.isFinite(Number(coords[0])) ||
+			!Number.isFinite(Number(coords[1]))
+		  ) return null;
+
+		  const display = String(props.d || '').trim();
+		  const search = normalizeText(props.b || props.d || '');
+
+		  if (!display || !search) return null;
+
+		  return {
+			type: 'address',
+			id: `addr_${idx}`,
+			display_label: display,
+			search_label: search,
+			lon: Number(coords[0]),
+			lat: Number(coords[1]),
+			_search_blob: search
+		  };
+		}).filter(Boolean);
+
+	  } catch (err) {
+		console.error(err);
+		showStatus('No se pudo cargar el callejero', true);
+	  }
+	}
+
+	
+
+	function selectAddressResult(item) {
+	  if (!item || !Number.isFinite(item.lat) || !Number.isFinite(item.lon)) return;
+
+	  selectedTerraceId = null;
+	  selectedRotulo = null;
+	  selectedTerraceFeature = null;
+
+
+	  clearLayer();
+	  resetSummary();
+	  terraceInfoSection.classList.add('hidden');
+	  noResult.style.display = 'none';
+
+	  placeName.textContent = item.display_label;
+	  placeName.classList.remove('empty');
+
+	  searchInput.value = item.display_label;
+	  searchClear.classList.add('visible');
+	  closeAC();
+	  searchInput.blur();
+	  document.activeElement?.blur();
+
+	  renderTerracesLayer();
+
+	  map.flyTo([item.lat, item.lon], Math.max(map.getZoom(), 17), { duration: 0.55 });
+
+	  if (isMobileLayout()) setSheetState('peek');
+	}
+	
+	
+	
+	
+	
+	
     /* ── Catalog loading ── */
     async function loadRotulosCatalog() {
       try {
@@ -2665,8 +2838,11 @@
        AUTOCOMPLETE
     ════════════════════════════════════════ */
     function getItemDisplayLabel(item) {
-      return item.label_busqueda || item.rotulo_formateado || item.rotulo_original || `Terraza ${item.terraza_id}`;
-    }
+	  if (item?.type === 'address') {
+		return item.display_label || 'Dirección';
+	  }
+	  return item.label_busqueda || item.rotulo_formateado || item.rotulo_original || `Terraza ${item.terraza_id}`;
+	}
 
     function closeAC() {
       acList.innerHTML = '';
@@ -2675,33 +2851,79 @@
       selectedSuggIdx = -1;
     }
 
-    function renderAC(items) {
-      currentSuggestions = items;
-      selectedSuggIdx = -1;
-      if (!items.length) { closeAC(); return; }
-      acList.innerHTML = items.map((item, index) => {
-        const title = escapeHtml(getItemDisplayLabel(item));
-        const subtitle = item.direccion_resumen ? escapeHtml(item.direccion_resumen) : escapeHtml(item.nombre_via || '');
-        return `
-          <div class="ac-item" role="option" data-idx="${index}">
-            <div class="ac-pin">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
-              </svg>
-            </div>
-            <div class="ac-text">
-              <div class="ac-title">${title}</div>
-              <div class="ac-sub">${subtitle}</div>
-            </div>
-          </div>
-        `;
-      }).join('');
-      acList.classList.add('open');
-      acList.querySelectorAll('.ac-item').forEach(el => {
-        el.addEventListener('mousedown', (e) => { e.preventDefault(); selectSuggestion(Number(el.dataset.idx)); });
-        el.addEventListener('touchend', (e) => { e.preventDefault(); selectSuggestion(Number(el.dataset.idx)); });
-      });
-    }
+    
+
+
+	function renderAC(items) {
+	  currentSuggestions = items;
+	  selectedSuggIdx = -1;
+
+	  if (!items.length) {
+		closeAC();
+		return;
+	  }
+
+	  acList.innerHTML = items.map((item, index) => {
+		const isAddress = item.type === 'address';
+		const title = escapeHtml(getItemDisplayLabel(item));
+		const subtitle = isAddress
+		  ? 'Dirección'
+		  : (item.direccion_resumen
+			  ? escapeHtml(item.direccion_resumen)
+			  : escapeHtml(item.nombre_via || 'Terraza'));
+
+		return `
+		  <div class="ac-item" role="option" data-idx="${index}">
+			<div class="ac-pin">
+			  ${
+				isAddress
+				  ? `
+				  <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none">
+					<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+				  </svg>
+				  `
+				  : `
+				  <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none">
+					<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+				  </svg>
+				  `
+			  }
+			</div>
+			<div class="ac-text">
+			  <div class="ac-title">${title}</div>
+			  <div class="ac-sub">${subtitle}</div>
+			</div>
+		  </div>
+		`;
+	  }).join('');
+
+	  acList.classList.add('open');
+
+	  acList.querySelectorAll('.ac-item').forEach(el => {
+		el.addEventListener('mousedown', (e) => {
+		  e.preventDefault();
+		  selectSuggestion(Number(el.dataset.idx));
+		});
+		el.addEventListener('touchend', (e) => {
+		  e.preventDefault();
+		  selectSuggestion(Number(el.dataset.idx));
+		});
+	  });
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     function highlightAC() {
       acList.querySelectorAll('.ac-item').forEach((el, i) => {
@@ -2710,36 +2932,66 @@
     }
 
     function searchCatalog(query) {
-      const q = normalizeText(query);
-      if (!q) return [];
-      const starts = [], contains = [];
-      for (const item of rotulosCatalog) {
-        if (!item._search_blob.includes(q)) continue;
-        const label = normalizeText(getItemDisplayLabel(item));
-        label.startsWith(q) ? starts.push(item) : contains.push(item);
-      }
-      return [...starts, ...contains].slice(0, 12);
-    }
+	  const q = normalizeText(query);
+	  if (!q) return [];
+
+	  const addressStarts = [];
+	  const addressContains = [];
+	  const terraceStarts = [];
+	  const terraceContains = [];
+
+	  for (const item of addressCatalog) {
+		if (!item._search_blob.includes(q)) continue;
+		const label = normalizeText(item.display_label);
+		(label.startsWith(q) ? addressStarts : addressContains).push(item);
+	  }
+
+	  for (const item of rotulosCatalog) {
+		if (!item._search_blob.includes(q)) continue;
+		const label = normalizeText(getItemDisplayLabel(item));
+		const terraceItem = { ...item, type: 'terrace' };
+		(label.startsWith(q) ? terraceStarts : terraceContains).push(terraceItem);
+	  }
+
+	  return [
+		...addressStarts,
+		...addressContains,
+		...terraceStarts,
+		...terraceContains
+	  ].slice(0, 12);
+	}
 
     function selectSuggestion(index) {
-      const item = currentSuggestions[index];
-      if (!item) return;
-      const feature = findTerraceFeatureById(item.terraza_id);
-      if (feature) { selectTerraceFeature(feature); return; }
+	  const item = currentSuggestions[index];
+	  if (!item) return;
 
-      selectedTerraceId = item.terraza_id;
-      selectedRotulo = getItemDisplayLabel(item);
-      searchInput.value = selectedRotulo;
-      searchClear.classList.add('visible');
-      closeAC();
-      searchInput.blur();
-      document.activeElement?.blur();
+	  if (item.type === 'address') {
+		selectAddressResult(item);
+		return;
+	  }
 
-      placeName.textContent = selectedRotulo;
-      placeName.classList.remove('empty');
-      setSheetState('mid');
-      scheduleLoad();
-    }
+
+
+	  const feature = findTerraceFeatureById(item.terraza_id);
+	  if (feature) {
+		selectTerraceFeature(feature);
+		return;
+	  }
+
+	  selectedTerraceId = item.terraza_id;
+	  selectedRotulo = getItemDisplayLabel(item);
+
+	  searchInput.value = selectedRotulo;
+	  searchClear.classList.add('visible');
+	  closeAC();
+	  searchInput.blur();
+	  document.activeElement?.blur();
+
+	  placeName.textContent = selectedRotulo;
+	  placeName.classList.remove('empty');
+	  setSheetState('mid');
+	  scheduleLoad();
+	}
 
     /* ── Search listeners ── */
     searchInput.addEventListener('input', () => {
@@ -2771,18 +3023,24 @@
     searchInput.addEventListener('blur', () => { setTimeout(() => closeAC(), 150); });
 
     searchClear.addEventListener('click', () => {
-      searchInput.value = '';
-      searchClear.classList.remove('visible');
-      closeAC();
-      selectedTerraceId = null;
-      selectedRotulo = null;
-      selectedTerraceFeature = null;
-      placeName.textContent = 'Selecciona una terraza';
-      placeName.classList.add('empty');
-      terraceInfoSection.classList.add('hidden');
-      renderTerracesLayer();
-      searchInput.focus();
-    });
+	  searchInput.value = '';
+	  searchClear.classList.remove('visible');
+	  closeAC();
+
+
+	  selectedTerraceId = null;
+	  selectedRotulo = null;
+	  selectedTerraceFeature = null;
+
+	  placeName.textContent = 'Selecciona una terraza';
+	  placeName.classList.add('empty');
+	  terraceInfoSection.classList.add('hidden');
+
+	  clearLayer();
+	  resetSummary();
+	  renderTerracesLayer();
+	  searchInput.focus();
+	});
 
     dateInput.addEventListener('change', () => scheduleLoad());
     dateInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadSelection(); });
@@ -2800,6 +3058,8 @@
 	  if (typeFilterDropdown.classList.contains('open') && window.innerWidth < 720) {
 		positionMobileTypeDropdown();
 	  }
+	  updateLegendPosition();
+	  updateLegendVisibility();
 	});
 
 	document.getElementById('mobile-filters-bar')?.addEventListener('scroll', () => {
@@ -2834,6 +3094,7 @@
 		closeTypeDropdown('mobile');
 	  }
 
+	  updateLegendPosition();
 	  updateLegendVisibility();
 	}
 
@@ -2864,14 +3125,17 @@
     resetSummary();
     setSheetState('peek', false);
 
-    restoreSavedLocation();
-
+   
+	await centerMapByApproxLocation();
     await loadRotulosCatalog();
-    await loadTerracesGeojson();
+    await loadAddressCatalog();
+	await loadTerracesGeojson();
     await initDuckDB();
     await refreshTerraceShadowColors();
+	
     renderTerracesLayer();
-    updateLegendVisibility();
+	updateLegendPosition();
+	updateLegendVisibility();
   </script>
 </body>
 </html>
