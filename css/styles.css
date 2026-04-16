@@ -1032,6 +1032,10 @@ input[type=range]::-moz-range-thumb {
     height: auto !important;
   }
 
+  #sheet-close {
+  	display: none !important;
+  }
+
   #sheet[data-state] { height: auto !important; }
   #sheet-handle-area { display: none; }
 
