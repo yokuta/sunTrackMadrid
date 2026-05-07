@@ -618,12 +618,74 @@
         font-size: 0.98rem;
       }
     }
+	.creator-links {
+	  display: flex;
+	  align-items: center;
+	  gap: 12px;
+	  color: var(--brand-dark);
+	  font-size: 13px;
+	  font-weight: 600;
+	}
+	
+	.creator-text {
+	  white-space: nowrap;
+	}
+	
+	.creator-links a {
+	  width: 34px;
+	  height: 34px;
+	  border-radius: 50%;
+	  display: flex;
+	  align-items: center;
+	  justify-content: center;
+	  background: rgba(255,255,255,0.94);
+	  border: 1px solid rgba(0,94,168,0.14);
+	  box-shadow: var(--shadow-sm);
+	  transition: transform 0.18s ease, background 0.18s ease;
+	  color: var(--brand-dark);
+	}
+	
+	.creator-links a:hover {
+	  transform: translateY(-1px);
+	  background: white;
+	}
+	
+	.creator-links svg {
+	  width: 18px;
+	  height: 18px;
+	}
+	
+	@media (max-width: 760px) {
+	  .creator-links {
+	    flex-wrap: wrap;
+	    gap: 8px;
+	  }
+	
+	  .creator-text {
+	    width: 100%;
+	  }
+	}
   </style>
 </head>
 <body>
 
   <header class="topbar">
-    <div class="topbar-inner">
+    <div class="topbar-inner" style="display:flex; justify-content:space-between; align-items:center; gap:18px; flex-wrap:wrap;">
+		<div class="creator-links">
+		  <span class="creator-text">Creado por Juan Jiménez Fernández</span>
+		
+		  <a href="https://github.com/yokuta/sunTrackMadrid" target="_blank" aria-label="GitHub SunTrack Madrid">
+		    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+		      <path d="M12 0C5.37 0 0 5.37 0 12a12 12 0 008.2 11.38c.6.12.82-.26.82-.58v-2.03c-3.34.72-4.04-1.42-4.04-1.42-.54-1.38-1.33-1.74-1.33-1.74-1.08-.74.08-.72.08-.72 1.2.08 1.82 1.22 1.82 1.22 1.06 1.82 2.8 1.3 3.48 1 .1-.78.42-1.3.76-1.6-2.66-.3-5.46-1.34-5.46-5.94 0-1.32.46-2.4 1.22-3.24-.12-.3-.52-1.52.12-3.18 0 0 1-.32 3.3 1.24a11.4 11.4 0 016 0c2.3-1.56 3.3-1.24 3.3-1.24.64 1.66.24 2.88.12 3.18.76.84 1.22 1.92 1.22 3.24 0 4.62-2.8 5.64-5.48 5.94.44.38.82 1.1.82 2.24v3.32c0 .32.22.7.82.58A12 12 0 0024 12c0-6.63-5.37-12-12-12z"/>
+		    </svg>
+		  </a>
+		
+		  <a href="https://www.linkedin.com/in/juan-jimenez-fernandez-b16b99119/" target="_blank" aria-label="LinkedIn Juan Jiménez Fernández">
+		    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+		      <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6S0 4.88 0 3.5 1.12 1 2.48 1s2.5 1.12 2.5 2.5zM.5 8h4V24h-4V8zm7 0h3.83v2.16h.05c.53-1 1.82-2.16 3.75-2.16C19.5 8 24 10.1 24 16.26V24h-4v-6.92c0-1.66-.03-3.8-2.32-3.8-2.32 0-2.68 1.82-2.68 3.68V24h-4V8z"/>
+		    </svg>
+		  </a>
+		</div>
       <a href="./index.html" class="back-btn" aria-label="Volver al visor principal">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M15 18l-6-6 6-6"></path>
