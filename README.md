@@ -1,4 +1,5 @@
 # ☀️ SunTrack Madrid  
+https://yokuta.github.io/sunTrackMadrid/
 SunTrack Madrid es un proyecto de análisis urbano que modela y visualiza la exposición solar de las terrazas de hostelería en Madrid mediante datos abiertos, simulización geoespacial y visualización web interactiva.
 Desarrollado en el marco de la segunda convocatoria de los Premios a la Reutilización de Datos Abiertos del Ayuntamiento de Madrid, el proyecto convierte un fenómeno urbano complejo —la sombra real sobre las terrazas— en información objetiva, medible y accesible.
 
