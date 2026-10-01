@@ -389,12 +389,14 @@ const map = L.map('map', {
   zoomControl: false,
 });
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  subdomains: 'abcd',
-  minZoom: MAP_MIN_ZOOM,
-  maxZoom: MAP_MAX_ZOOM,
-  attribution: '© OpenStreetMap © CARTO'
-}).addTo(map);
+const baseLayer = L.tileLayer(
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors',
+    className: 'gray-basemap'
+  }
+).addTo(map);
 
 map.fitBounds(MADRID_BOUNDS, {
   padding: isMobileLayout() ? [16, 16] : [20, 20],
