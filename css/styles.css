@@ -1187,7 +1187,3 @@ input[type=range]::-moz-range-thumb {
 
   #desktop-label { display: block !important; }
 }
-
-.gray-basemap {
-  filter: grayscale(100%) saturate(0%) brightness(1.15) contrast(0.85);
-}

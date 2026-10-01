@@ -389,13 +389,41 @@ const map = L.map('map', {
   zoomControl: false,
 });
 
-const baseLayer = L.tileLayer(
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-  {
-    maxZoom: 19,
-    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
+// Vector geometry is redrawn at every zoom, including Leaflet zoom 19.
+// OpenFreeMap's source tiles stop at z14; this is vector overzoom, not raster enlargement.
+const baseLayer = L.maplibreGL({
+  style: 'https://tiles.openfreemap.org/styles/positron',
+  maxZoom: MAP_MAX_ZOOM,
+  interactive: false,
+  pane: 'tilePane', // Keep the basemap below all existing Leaflet overlays.
+  attribution: '<a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a> ' +
+    '&copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> ' +
+    'Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+}).addTo(map);
+
+const basemap = baseLayer.getMaplibreMap();
+basemap.on('style.load', () => {
+  // Only adjust the provider's style; terrace, shadow and location layers stay in Leaflet.
+  for (const layer of basemap.getStyle().layers) {
+    if (layer['source-layer'] === 'poi' ||
+        (layer.type === 'symbol' && layer.layout?.['icon-image'])) {
+      basemap.setLayoutProperty(layer.id, 'visibility', 'none');
+    } else if (layer.type === 'symbol' && layer['source-layer'] === 'transportation_name') {
+      basemap.setLayoutProperty(layer.id, 'text-size', 11);
+      basemap.setPaintProperty(layer.id, 'text-color', '#888888');
+      basemap.setPaintProperty(layer.id, 'text-halo-color', '#ffffff');
+      basemap.setPaintProperty(layer.id, 'text-halo-width', 1);
+    }
   }
-).addTo(map);
+
+  if (basemap.getLayer('background')) {
+    basemap.setPaintProperty('background', 'background-color', '#f5f5f5');
+  }
+  if (basemap.getLayer('building')) {
+    basemap.setPaintProperty('building', 'fill-color', '#e5e5e5');
+    basemap.setPaintProperty('building', 'fill-outline-color', '#d6d6d6');
+  }
+});
 
 map.fitBounds(MADRID_BOUNDS, {
   padding: isMobileLayout() ? [16, 16] : [20, 20],
