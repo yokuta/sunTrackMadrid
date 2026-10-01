@@ -390,11 +390,10 @@ const map = L.map('map', {
 });
 
 const baseLayer = L.tileLayer(
-  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
   {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors',
-    className: 'gray-basemap'
+    maxZoom: 16,
+    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
   }
 ).addTo(map);
 
